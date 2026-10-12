@@ -1,0 +1,16 @@
+{
+  "domain": "petrolmate",
+  "name": "Petrolmate Fuel Prices",
+  "codeowners": ["@AJErazzor"],
+  "config_flow": true,
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
+  "documentation": "https://github.com/AJErazzor/ha-petrolmate",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/AJErazzor/ha-petrolmate/issues",
+  "requirements": [],
+  "version": "0.1.4"
+}

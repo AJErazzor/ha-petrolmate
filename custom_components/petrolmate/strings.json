@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Petrolmate fuel prices",
+        "description": "Find the cheapest and closest fuel near a person, phone or zone. Prices come from petrolmate.com.au (no API key needed).",
+        "data": {
+          "name": "Name",
+          "location_entity": "Search around",
+          "radius": "Search radius",
+          "fuels": "Fuel types",
+          "networks": "Fuel card networks"
+        },
+        "data_description": {
+          "location_entity": "A phone tracker or person follows you around; a zone stays put. Falls back to home when the entity has no GPS.",
+          "radius": "Maximum distance. The API returns the nearest 50 stations, so in a city the real reach is usually smaller.",
+          "networks": "Only stations of these networks count. Which brands belong to each network can be changed later in the options."
+        }
+      }
+    },
+    "error": {
+      "no_fuels": "Pick at least one fuel type.",
+      "no_networks": "Pick at least one fuel card network."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Petrolmate options",
+        "data": {
+          "location_entity": "Search around",
+          "radius": "Search radius",
+          "fuels": "Fuel types",
+          "networks": "Fuel card networks",
+          "scan_interval": "Refresh every",
+          "move_distance": "Refresh after moving"
+        },
+        "data_description": {
+          "scan_interval": "Prices only change every few hours; movement triggers its own refresh.",
+          "move_distance": "Re-query once the tracked location has moved this far (at most every 2 minutes)."
+        }
+      },
+      "brands": {
+        "title": "Station brands per card network",
+        "description": "Comma-separated station brands (as Petrolmate lists them) that each card works at, for: {networks}. Remove any brand your card shouldn't use.",
+        "data": {
+          "brands_bp": "BP card",
+          "brands_shell": "Shell card",
+          "brands_ampol": "Ampol card",
+          "brands_caltex": "Caltex card",
+          "brands_7eleven": "7-Eleven card",
+          "brands_mobil": "Mobil card",
+          "brands_united": "United card",
+          "brands_metro": "Metro card",
+          "brands_puma": "Puma card",
+          "brands_liberty": "Liberty card",
+          "brands_costco": "Costco card"
+        }
+      }
+    },
+    "error": {
+      "no_fuels": "Pick at least one fuel type.",
+      "no_networks": "Pick at least one fuel card network."
+    }
+  }
+}
