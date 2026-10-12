@@ -32,7 +32,7 @@ class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
     _attr_suggested_display_precision = 1
     _attr_icon = "mdi:gas-station"
     # lists change constantly and are only useful live — keep them out of the recorder
-    _unrecorded_attributes = frozenset({"top3", "closest3", "cheapest_any_brand", "maps", "updated"})
+    _unrecorded_attributes = frozenset({"top3", "closest3", "cheapest_any_brand", "maps", "maps_google", "updated"})
 
     def __init__(self, coordinator: PetrolmateCoordinator, fuel: str) -> None:
         super().__init__(coordinator, f"cheapest_{fuel.lower()}")
@@ -63,6 +63,7 @@ class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
             "distance_km": best and best["km"],
             "updated": best and best["updated"],
             "maps": best and best["maps"],
+            "maps_google": best and best["maps_google"],
             # latitude/longitude put the cheapest station on a map card
             "latitude": best and best["latitude"],
             "longitude": best and best["longitude"],

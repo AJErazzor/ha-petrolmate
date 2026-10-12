@@ -16,7 +16,7 @@ Prices come from the free [Petrolmate API](https://petrolmate.com.au/home-assist
 - **Every fuel:** Diesel, Unleaded 91, E10, Premium 95, Premium 98 and LPG, with one sensor each.
 - **Cheapest and closest:** the top 3 by price and the top 3 by distance, plus the cheapest station *without* your cards, so you can see what the card costs you.
 - **Filters as entities:** a fuel-type select and one switch per card network, usable from automations too. Changing them recalculates instantly with no new API call.
-- **Dashboard card included:** filter chips, numbered tiles with brand logos, and a map with callouts using Home Assistant's own map tiles. Tap any station for Apple Maps directions.
+- **Dashboard card included:** filter chips, numbered tiles with brand logos, and a map with callouts using Home Assistant's own map tiles. Tap any station for directions: Apple Maps on iPhone, Google Maps on Android.
 - **Light on your database:** the per-station lists are kept out of the recorder.
 
 ## Installation
@@ -60,6 +60,7 @@ type: custom:petrolmate-card
 | `title` | `Fuel` | |
 | `map` | `true` | Show the map. |
 | `map_height` | `340` | Height in pixels. |
+| `maps` | `auto` | Which app opens for directions: `auto` (Apple Maps on iPhone, iPad and Mac, Google Maps everywhere else), `apple` or `google`. |
 | `logos` | built in | Override a network logo, e.g. `logos: { bp: /local/bp.svg }` |
 
 Cheapest stations are numbered **1–3** and closest stations are lettered **A–C**, on both the tiles and the map. A station on both lists shows as **1A**.
@@ -70,7 +71,7 @@ For an entry called *Petrolmate*:
 
 | Entity | |
 |---|---|
-| `sensor.petrolmate_cheapest_diesel` (one per fuel) | Cheapest price in c/L at your enabled networks. Attributes include `station`, `brand`, `distance_km`, `maps` (directions link), `latitude`/`longitude`, `top3`, `closest3` and `cheapest_any_brand`. |
+| `sensor.petrolmate_cheapest_diesel` (one per fuel) | Cheapest price in c/L at your enabled networks. Attributes include `station`, `brand`, `distance_km`, `maps` / `maps_google` (Apple and Google directions links), `latitude`/`longitude`, `top3`, `closest3` and `cheapest_any_brand`. |
 | `sensor.petrolmate_stations_searched` | How many stations the last search returned, and how far it reached (`reach_km`). |
 | `select.petrolmate_fuel_type` | Which fuel the card shows. |
 | `switch.petrolmate_<network>_card` | Include or exclude a network. With every switch off, all networks count. |

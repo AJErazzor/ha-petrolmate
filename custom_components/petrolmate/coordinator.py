@@ -59,6 +59,11 @@ def maps_url(lat: float, lng: float) -> str:
     return f"https://maps.apple.com/directions?destination={lat},{lng}&mode=driving"
 
 
+def google_maps_url(lat: float, lng: float) -> str:
+    """Google Maps driving directions — opens the Google Maps app on Android."""
+    return f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}&travelmode=driving"
+
+
 @dataclass
 class PetrolmateData:
     """Result of one API fetch."""
@@ -191,6 +196,7 @@ class PetrolmateCoordinator(DataUpdateCoordinator[PetrolmateData]):
                 "latitude": s.get("lat"),
                 "longitude": s.get("lng"),
                 "maps": maps_url(s.get("lat"), s.get("lng")),
+                "maps_google": google_maps_url(s.get("lat"), s.get("lng")),
                 "card": net is not None and net in self.active_networks(),
             })
         out.sort(key=lambda r: (r["price"], r["km"]))

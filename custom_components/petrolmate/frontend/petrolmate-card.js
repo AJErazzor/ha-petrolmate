@@ -8,9 +8,10 @@
  *   entity: select.petrolmate_fuel_type   # pick an entry when you have several
  *   map: true
  *   map_height: 340
+ *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.1.4';
+const PM_VERSION = '0.1.5';
 
 const FUEL_SHORT = { DIESEL: 'Diesel', ULP: 'ULP', E10: 'E10', PULP95: '95', PULP98: '98', LPG: 'LPG' };
 
@@ -35,6 +36,8 @@ async function loadMapLibs() {
   if (!window.L.maplibreGL) await loadScript(LIBS.bridge);
 }
 
+// Apple Maps on Apple devices (incl. iPadOS, which reports itself as a Mac), Google Maps everywhere else
+const IS_APPLE = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = (c) => '$' + (c / 100).toFixed(3); // c/L → $/L
 // feed timestamps are UTC without a zone; show when the price was set
@@ -116,7 +119,7 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
 // bundle starts, and this module can run before that. Defining early lands in a registry HA no longer reads.
 const makeCard = () => class PetrolmateCard extends HTMLElement {
   setConfig(config) {
-    this._config = { title: 'Fuel', map: true, map_height: 340, ...config };
+    this._config = { title: 'Fuel', map: true, map_height: 340, maps: 'auto', ...config };
     this._logos = config.logos || {}; // per-network overrides; defaults come from the integration
     this._built = false;
   }
@@ -221,7 +224,7 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
 
     const top = a.top3 || [], near = a.closest3 || [], best = top[0];
     const tile = (r, lab, head, detail) => r
-      ? `<div class="tile" style="--c:${colour(r)};${logo(r) ? `--logo:url('${logo(r)}')` : ''}" data-act="go" data-val="${esc(r.maps)}">
+      ? `<div class="tile" style="--c:${colour(r)};${logo(r) ? `--logo:url('${logo(r)}')` : ''}" data-act="go" data-val="${esc(this._dirUrl(r))}">
           <div class="h"><span class="bd">${lab}</span>${head}</div><div class="st">${esc(r.station)}</div><div class="dt">${detail}</div></div>`
       : `<div class="tile empty"></div>`;
     let tiles = '';
@@ -233,7 +236,7 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     }
     const any = a.cheapest_any_brand;
     const anyLine = any && best && any.price < best.price
-      ? `<div class="any" data-act="go" data-val="${esc(any.maps)}">Cheapest without your cards: <b>${money(any.price)}</b> at ${esc(any.station)} · ${any.km} km · ${money(best.price - any.price)} cheaper</div>` : '';
+      ? `<div class="any" data-act="go" data-val="${esc(this._dirUrl(any))}">Cheapest without your cards: <b>${money(any.price)}</b> at ${esc(any.station)} · ${any.km} km · ${money(best.price - any.price)} cheaper</div>` : '';
 
     dyn.innerHTML = `
       <div class="hdr"><span class="t">${esc(this._config.title)}</span>${ents.refresh ? `<ha-icon icon="mdi:refresh" data-act="refresh" data-ent="${ents.refresh}" title="Refresh"></ha-icon>` : ''}</div>
@@ -348,6 +351,12 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     return { url };
   }
 
+  _dirUrl(r) {
+    const app = this._config.maps === 'auto' ? (IS_APPLE ? 'apple' : 'google') : this._config.maps;
+    const google = r.maps_google || `https://www.google.com/maps/dir/?api=1&destination=${r.latitude},${r.longitude}&travelmode=driving`;
+    return app === 'google' ? google : r.maps;
+  }
+
   _icon(r, pos) {
     const label = (r.cheap != null ? String(r.cheap + 1) : '') + (r.near != null ? 'ABC'[r.near] : '');
     return window.L.divIcon({
@@ -362,7 +371,7 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     const tags = [r.cheap != null ? 'Cheapest ' + (r.cheap + 1) : '', r.near != null ? 'Closest ' + 'ABC'[r.near] : ''].filter(Boolean).join(' · ');
     div.innerHTML = `<div class="co-name">${esc(r.station)}</div><div class="co-addr">${esc(r.address)}</div><div class="co-meta">${tags}</div>
       <div class="co-price">${money(r.price)} <small>/L</small></div><div class="co-meta">${r.km} km · ${since(r.updated)}</div><div class="co-go">Directions</div>`;
-    div.querySelector('.co-go').addEventListener('click', () => window.open(r.maps, '_blank'));
+    div.querySelector('.co-go').addEventListener('click', () => window.open(this._dirUrl(r), '_blank'));
     return div;
   }
 
