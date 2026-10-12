@@ -8,59 +8,115 @@
           "name": "Name",
           "location_entity": "Search around",
           "radius": "Search radius",
+          "states": "States",
           "fuels": "Fuel types",
-          "networks": "Fuel card networks"
+          "networks": "Fuel brands"
         },
         "data_description": {
           "location_entity": "A phone tracker or person follows you around; a zone stays put. Falls back to home when the entity has no GPS.",
           "radius": "Maximum distance. The API returns the nearest 50 stations, so in a city the real reach is usually smaller.",
-          "networks": "Only stations of these networks count. Which brands belong to each network can be changed later in the options."
+          "states": "Where you usually fill up. Decides which station brands are offered when you set up where each fuel brand is sold, and for discounts.",
+          "networks": "The fuel brands you want. Which station brands sell each one is set on the next page."
         }
       }
     },
     "error": {
       "no_fuels": "Pick at least one fuel type.",
-      "no_networks": "Pick at least one fuel card network."
+      "no_networks": "Pick at least one fuel brand."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Petrolmate options",
+        "menu_options": {
+          "search": "Search settings & fuel brands",
+          "brands": "Where each fuel brand is sold",
+          "discounts": "My discounts"
+        }
+      },
+      "search": {
+        "title": "Search settings & fuel brands",
         "data": {
           "location_entity": "Search around",
           "radius": "Search radius",
+          "states": "States",
           "fuels": "Fuel types",
-          "networks": "Fuel card networks",
+          "networks": "Fuel brands",
           "scan_interval": "Refresh every",
           "move_distance": "Refresh after moving"
         },
         "data_description": {
+          "location_entity": "A phone tracker or person follows you around; a zone stays put. Falls back to home when the entity has no GPS.",
+          "radius": "Maximum distance. The API returns the nearest 50 stations, so in a city the real reach is usually smaller.",
+          "states": "Where you usually fill up. Decides which station brands are offered when you set up where each fuel brand is sold, and for discounts.",
+          "networks": "The fuel brands you want. Which station brands sell each one is set on the next page.",
           "scan_interval": "Prices only change every few hours; movement triggers its own refresh.",
           "move_distance": "Re-query once the tracked location has moved this far (at most every 2 minutes)."
         }
       },
       "brands": {
-        "title": "Station brands per card network",
-        "description": "Comma-separated station brands (as Petrolmate lists them) that each card works at, for: {networks}. Remove any brand your card shouldn't use.",
+        "title": "Where each fuel brand is sold",
+        "description": "The station brands (the name on the shop) that sell each fuel brand: {networks}. Pick from the list — brands found near you show how many stations — or type any other name.",
         "data": {
-          "brands_bp": "BP card",
-          "brands_shell": "Shell card",
-          "brands_ampol": "Ampol card",
-          "brands_caltex": "Caltex card",
-          "brands_7eleven": "7-Eleven card",
-          "brands_mobil": "Mobil card",
-          "brands_united": "United card",
-          "brands_metro": "Metro card",
-          "brands_puma": "Puma card",
-          "brands_liberty": "Liberty card",
-          "brands_costco": "Costco card"
+          "brands_bp": "BP",
+          "brands_shell": "Shell",
+          "brands_ampol": "Ampol",
+          "brands_caltex": "Caltex",
+          "brands_7eleven": "7-Eleven",
+          "brands_mobil": "Mobil",
+          "brands_united": "United",
+          "brands_metro": "Metro",
+          "brands_puma": "Puma",
+          "brands_liberty": "Liberty",
+          "brands_costco": "Costco"
+        }
+      },
+      "discounts": {
+        "title": "My discounts",
+        "description": "Discounts lower the price shown and can change which station is cheapest. Each one gets a switch, off by default — turn it on while you hold the docket or voucher.\n\n{list}",
+        "menu_options": {
+          "discount_add": "Add a discount",
+          "discount_edit": "Edit a discount",
+          "discount_delete": "Delete discounts",
+          "discount_save": "Save and close"
+        }
+      },
+      "discount": {
+        "title": "Discount",
+        "description": "Most discounts depend on the shop (e.g. the Coles docket works at Reddy Express but not OTR), so pick station brands, not fuel brands.",
+        "data": {
+          "name": "Name",
+          "cents": "Cents off per litre",
+          "brands": "Works at",
+          "fuels": "Fuels",
+          "stacks": "Stacks with other discounts"
+        },
+        "data_description": {
+          "name": "Shown on the card, e.g. Coles docket.",
+          "brands": "Station brands where it's accepted. Pick or type.",
+          "fuels": "Leave empty for all fuels.",
+          "stacks": "Turn on for in-store offers that add to a docket (e.g. Reddy Express $20 spend). Otherwise only the best single discount applies at a station."
+        }
+      },
+      "discount_edit": {
+        "title": "Edit a discount",
+        "data": {
+          "discount": "Discount"
+        }
+      },
+      "discount_delete": {
+        "title": "Delete discounts",
+        "data": {
+          "discounts": "Discounts to delete"
         }
       }
     },
     "error": {
       "no_fuels": "Pick at least one fuel type.",
-      "no_networks": "Pick at least one fuel card network."
+      "no_networks": "Pick at least one fuel brand.",
+      "no_name": "Give the discount a name.",
+      "no_brands": "Pick at least one station brand."
     }
   }
 }

@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
@@ -36,13 +37,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: PetrolmateConfigEntry) -> bool:
     coordinator = PetrolmateCoordinator(hass, entry)
+    coordinator.version = str((await async_get_integration(hass, DOMAIN)).version)
     # raises ConfigEntryNotReady on failure → HA retries setup with backoff
     await coordinator.async_config_entry_first_refresh()
     coordinator.async_track_movement()
     entry.runtime_data = coordinator
     entry.async_on_unload(entry.add_update_listener(_async_reload))
+    _remove_stale_discounts(hass, entry, coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+def _remove_stale_discounts(hass: HomeAssistant, entry: PetrolmateConfigEntry, c: PetrolmateCoordinator) -> None:
+    """Drop the switches of discounts deleted in the options."""
+    keep = {f"{entry.entry_id}_discount_{d['id']}" for d in c.discounts}
+    reg = er.async_get(hass)
+    for ent in er.async_entries_for_config_entry(reg, entry.entry_id):
+        if ent.unique_id.startswith(f"{entry.entry_id}_discount_") and ent.unique_id not in keep:
+            reg.async_remove(ent.entity_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: PetrolmateConfigEntry) -> bool:

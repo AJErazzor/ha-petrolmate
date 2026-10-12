@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import timedelta
 import logging
@@ -23,12 +24,14 @@ from .const import (
     API_TIMEOUT,
     API_URL,
     CONF_BRANDS_PREFIX,
+    CONF_DISCOUNTS,
     CONF_FUELS,
     CONF_LOCATION_ENTITY,
     CONF_MOVE_DISTANCE,
     CONF_NETWORKS,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
+    CONF_STATES,
     DEFAULT_FUELS,
     DEFAULT_LOCATION_ENTITY,
     DEFAULT_MOVE_DISTANCE,
@@ -52,6 +55,28 @@ def _distance_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     dp, dl = p2 - p1, math.radians(lng2 - lng1)
     a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
     return 2 * r * math.asin(math.sqrt(a))
+
+
+def split_brands(value: str | list[str] | None) -> list[str]:
+    """Brand lists are stored as lists now; older installs saved a comma-separated string."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        value = value.split(",")
+    return [b for b in (x.strip() for x in value) if b]
+
+
+async def async_detect_state(hass: HomeAssistant, lat: float, lng: float) -> str | None:
+    """State of the nearest station to a point (the API tags each station), for setup defaults."""
+    try:
+        async with asyncio.timeout(API_TIMEOUT):
+            resp = await async_get_clientsession(hass).get(
+                API_URL, params={"lat": f"{lat:.6f}", "lng": f"{lng:.6f}", "radius": 25000, "limit": 1}
+            )
+            payload = await resp.json(content_type=None)
+        return (payload.get("stations") or [{}])[0].get("state")
+    except (aiohttp.ClientError, TimeoutError, ValueError, AttributeError):
+        return None
 
 
 def maps_url(lat: float, lng: float) -> str:
@@ -97,14 +122,17 @@ class PetrolmateCoordinator(DataUpdateCoordinator[PetrolmateData]):
         self.network_brands: dict[str, list[str]] = {}
         for net in self.networks:
             brands = conf.get(f"{CONF_BRANDS_PREFIX}{net}")
-            if brands is None:
-                brands = NETWORKS[net]["brands"]
-            elif isinstance(brands, str):
-                brands = [b for b in (x.strip() for x in brands.split(",")) if b]
+            brands = NETWORKS[net]["brands"] if brands is None else split_brands(brands)
             self.network_brands[net] = [b.upper() for b in brands]
+        self.states: list[str] = conf.get(CONF_STATES) or []
+        # discounts: {id, name, cents, brands, fuels ([] = all), stacks}
+        self.discounts: list[dict[str, Any]] = [d for d in conf.get(CONF_DISCOUNTS) or [] if d.get("id")]
         # runtime filter state, driven by the switch/select entities
         self.enabled_networks: set[str] = set(self.networks)
+        self.any_brand: bool = False
+        self.enabled_discounts: set[str] = set()
         self.selected_fuel: str = self.fuels[0] if self.fuels else "DIESEL"
+        self.version: str | None = None  # integration version, shown on the device page
         self._session = async_get_clientsession(hass)
 
     # ---- location -------------------------------------------------------
@@ -169,8 +197,30 @@ class PetrolmateCoordinator(DataUpdateCoordinator[PetrolmateData]):
                 return net
         return None
 
+    def seen_brands(self) -> Counter[str]:
+        """Station brands in the latest search, with how many stations each."""
+        return Counter(s.get("brand") for s in (self.data.stations if self.data else []) if s.get("brand"))
+
+    def discount_for(self, brand: str | None, fuel: str) -> tuple[float, list[str]]:
+        """Cents off at a station: every stacking discount plus the best single non-stacking one."""
+        b = (brand or "").upper()
+        stack, single = [], None
+        for d in self.discounts:
+            if d["id"] not in self.enabled_discounts or not d.get("cents"):
+                continue
+            if b not in {x.upper() for x in d.get("brands") or []}:
+                continue
+            if d.get("fuels") and fuel not in d["fuels"]:
+                continue
+            if d.get("stacks"):
+                stack.append(d)
+            elif single is None or d["cents"] > single["cents"]:
+                single = d
+        used = stack + ([single] if single else [])
+        return round(sum(d["cents"] for d in used), 1), [d["name"] for d in used]
+
     def rows(self, fuel: str) -> list[dict[str, Any]]:
-        """One row per station selling `fuel` (cheapest matching code), sorted by price then distance."""
+        """One row per station selling `fuel` (cheapest matching code), sorted by price after discounts, then distance."""
         if self.data is None:
             return []
         codes = FUELS.get(fuel, FUELS["DIESEL"])["codes"]
@@ -185,26 +235,28 @@ class PetrolmateCoordinator(DataUpdateCoordinator[PetrolmateData]):
             if best is None:
                 continue
             net = self.network_of(s.get("brand"))
+            off, names = self.discount_for(s.get("brand"), fuel)
             out.append({
-                "price": best["price"],
+                "price": round(best["price"] - off, 1),
+                "pump_price": best["price"],
+                "discount": off,
+                "discounts": names,
                 "brand": s.get("brand"),
                 "network": net,
                 "station": s.get("name"),
                 "address": f"{s.get('address', '')}, {s.get('suburb', '')}".strip(", "),
+                "state": s.get("state"),
                 "km": round((s.get("distance_m") or 0) / 1000, 1),
                 "updated": best.get("updated"),  # UTC, no zone suffix
                 "latitude": s.get("lat"),
                 "longitude": s.get("lng"),
                 "maps": maps_url(s.get("lat"), s.get("lng")),
                 "maps_google": google_maps_url(s.get("lat"), s.get("lng")),
-                "card": net is not None and net in self.active_networks(),
+                # one of your ticked fuel brands (or Any is on)
+                "card": self.any_brand or (net is not None and net in self.enabled_networks),
             })
         out.sort(key=lambda r: (r["price"], r["km"]))
         return out
-
-    def active_networks(self) -> set[str]:
-        """Networks switched on; none switched on means all of them."""
-        return self.enabled_networks or set(self.networks)
 
     def summary(self, fuel: str) -> dict[str, Any]:
         rows = self.rows(fuel)

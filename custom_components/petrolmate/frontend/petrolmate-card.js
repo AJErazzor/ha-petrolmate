@@ -1,5 +1,5 @@
 /*
- * Petrolmate card — cheapest / closest fuel at your card networks, with filters and a map.
+ * Petrolmate card — cheapest / closest fuel at your fuel brands, after your discounts, with filters and a map.
  * Served and registered by the Petrolmate integration; no separate resource needed.
  *
  *   type: custom:petrolmate-card
@@ -11,7 +11,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.1.6';
+const PM_VERSION = '0.2.0';
 
 const FUEL_SHORT = { DIESEL: 'Diesel', ULP: 'ULP', E10: 'E10', PULP95: '95', PULP98: '98', LPG: 'LPG' };
 
@@ -60,6 +60,8 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
   font-size:13px;font-weight:600;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color)}
 .chip ha-icon{--mdc-icon-size:18px;color:var(--disabled-text-color, #9e9e9e)}
 .chip.on ha-icon{color:var(--cc)}
+.chip.dim{opacity:.45}
+.tile .h s,.co-price s{font-size:.8em;font-weight:400;color:var(--secondary-text-color)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .colh{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;margin:4px 4px 0}
 .colh ha-icon{--mdc-icon-size:18px}
@@ -150,18 +152,21 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     if (!select || !hass.states[select]) return null;
     const dev = reg[select] && reg[select].device_id;
     const mine = Object.keys(reg).filter((e) => reg[e].platform === 'petrolmate' && (!dev || reg[e].device_id === dev) && hass.states[e]);
-    const fuels = {}, switches = [];
-    let stations = null, refresh = null;
+    const fuels = {}, switches = [], discounts = [];
+    let stations = null, refresh = null, any = null;
     for (const e of mine) {
       const a = hass.states[e].attributes;
       if (e.startsWith('sensor.') && a.fuel) fuels[a.fuel] = e;
       else if (e.startsWith('sensor.') && 'location_entity' in a) stations = e;
       else if (e.startsWith('switch.') && a.network) switches.push(e);
+      else if (e.startsWith('switch.') && a.any_brand) any = e;
+      else if (e.startsWith('switch.') && a.discount) discounts.push(e);
       else if (e.startsWith('button.')) refresh = e;
     }
     const order = Object.keys(FUEL_SHORT);
     switches.sort((a, b) => hass.states[a].attributes.network.localeCompare(hass.states[b].attributes.network));
-    return { select, fuels, fuelOrder: order.filter((f) => fuels[f]), switches, stations, refresh, all: [select, ...mine] };
+    discounts.sort((a, b) => String(hass.states[a].attributes.label).localeCompare(hass.states[b].attributes.label));
+    return { select, fuels, fuelOrder: order.filter((f) => fuels[f]), switches, any, discounts, stations, refresh, all: [select, ...mine] };
   }
 
   _build() {
@@ -210,10 +215,19 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     const logo = (r) => this._logos[r.network] || netLogos[r.network];
     this._colour = colour;
 
-    const netChips = ents.switches.map((e) => {
-      const s = hass.states[e], on = s.state === 'on', name = (s.attributes.friendly_name || '').replace(/^.*? (\S+) card$/i, '$1');
-      return `<div class="chip ${on ? 'on' : ''}" style="--cc:${s.attributes.color}" data-act="toggle" data-ent="${e}">
-        <ha-icon icon="${on ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'}"></ha-icon>${esc(name)}</div>`;
+    const anyOn = !!(ents.any && hass.states[ents.any].state === 'on');
+    const chip = (e, label, colour, dim) => {
+      const on = hass.states[e].state === 'on';
+      return `<div class="chip ${on ? 'on' : ''} ${dim ? 'dim' : ''}" style="--cc:${colour}" data-act="toggle" data-ent="${e}">
+        <ha-icon icon="${on ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'}"></ha-icon>${esc(label)}</div>`;
+    };
+    // older versions named the switch "<brand> card" and had no label attribute
+    const label = (s) => s.attributes.label || (s.attributes.friendly_name || '').replace(/^.*? (\S+)(?: card)?$/i, '$1');
+    const netChips = (ents.any ? chip(ents.any, 'Any', 'var(--primary-color)') : '')
+      + ents.switches.map((e) => chip(e, label(hass.states[e]), hass.states[e].attributes.color, anyOn)).join('');
+    const discChips = ents.discounts.map((e) => {
+      const at = hass.states[e].attributes;
+      return chip(e, `${at.label} −${at.cents}c`, 'var(--primary-color)');
     }).join('');
     const codes = sel.attributes.codes || {};
     const fuelChips = ents.fuelOrder.map((f) => {
@@ -223,6 +237,8 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     }).join('');
 
     const top = a.top3 || [], near = a.closest3 || [], best = top[0];
+    const off = (r) => (r.discount > 0 ? ` <s>${money(r.pump_price)}</s>` : '');
+    const offNote = (r) => (r.discount > 0 ? `−${r.discount}c ${esc((r.discounts || []).join('+'))} · ` : '');
     const tile = (r, lab, head, detail) => r
       ? `<div class="tile" style="--c:${colour(r)};${logo(r) ? `--logo:url('${logo(r)}')` : ''}" data-act="go" data-val="${esc(this._dirUrl(r))}">
           <div class="h"><span class="bd">${lab}</span>${head}</div><div class="st">${esc(r.station)}</div><div class="dt">${detail}</div></div>`
@@ -230,24 +246,25 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     let tiles = '';
     for (let i = 0; i < 3; i++) {
       const c = top[i], n = near[i];
-      tiles += tile(c, i + 1, c && `<b>${money(c.price)}</b> · ${c.km} km`, c && since(c.updated));
+      tiles += tile(c, i + 1, c && `<b>${money(c.price)}</b>${off(c)} · ${c.km} km`, c && offNote(c) + since(c.updated));
       const d = n && best ? n.price - best.price : 0;
-      tiles += tile(n, 'ABC'[i], n && `<b>${n.km} km</b> · ${money(n.price)}`, n && `${d > 0.05 ? '+' + money(d) : 'cheapest'} · ${since(n.updated)}`);
+      tiles += tile(n, 'ABC'[i], n && `<b>${n.km} km</b> · ${money(n.price)}${off(n)}`, n && `${d > 0.05 ? '+' + money(d) : 'cheapest'} · ${offNote(n)}${since(n.updated)}`);
     }
     const any = a.cheapest_any_brand;
-    const anyLine = any && best && any.price < best.price
-      ? `<div class="any" data-act="go" data-val="${esc(this._dirUrl(any))}">Cheapest without your cards: <b>${money(any.price)}</b> at ${esc(any.station)} · ${any.km} km · ${money(best.price - any.price)} cheaper</div>` : '';
+    const anyLine = !anyOn && any && best && any.price < best.price
+      ? `<div class="any" data-act="go" data-val="${esc(this._dirUrl(any))}">Cheapest at other brands: <b>${money(any.price)}</b> at ${esc(any.station)} · ${any.km} km · ${money(best.price - any.price)} cheaper</div>` : '';
 
     dyn.innerHTML = `
       <div class="hdr"><span class="t">${esc(this._config.title)}</span>${ents.refresh ? `<ha-icon icon="mdi:refresh" data-act="refresh" data-ent="${ents.refresh}" title="Refresh"></ha-icon>` : ''}</div>
       <div class="chips">${netChips}</div>
       <div class="chips">${fuelChips}</div>
+      ${discChips ? `<div class="chips">${discChips}</div>` : ''}
       <div class="cols">
         <div class="colh"><ha-icon icon="mdi:currency-usd"></ha-icon>Cheapest</div>
         <div class="colh"><ha-icon icon="mdi:map-marker-distance"></ha-icon>Closest</div>
         ${top.length || near.length ? tiles : ''}
       </div>
-      ${top.length || near.length ? '' : `<div class="none">No ${esc(a.fuel_name || 'fuel')} at your card networks nearby</div>`}
+      ${top.length || near.length ? '' : `<div class="none">No ${esc(a.fuel_name || 'fuel')} at your fuel brands nearby</div>`}
       ${anyLine}`;
 
     const st = ents.stations && hass.states[ents.stations];
@@ -370,7 +387,8 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     const div = document.createElement('div');
     const tags = [r.cheap != null ? 'Cheapest ' + (r.cheap + 1) : '', r.near != null ? 'Closest ' + 'ABC'[r.near] : ''].filter(Boolean).join(' · ');
     div.innerHTML = `<div class="co-name">${esc(r.station)}</div><div class="co-addr">${esc(r.address)}</div><div class="co-meta">${tags}</div>
-      <div class="co-price">${money(r.price)} <small>/L</small></div><div class="co-meta">${r.km} km · ${since(r.updated)}</div><div class="co-go">Directions</div>`;
+      <div class="co-price">${money(r.price)} <small>/L</small>${r.discount > 0 ? ` <s>${money(r.pump_price)}</s>` : ''}</div>
+      ${r.discount > 0 ? `<div class="co-meta">−${r.discount}c ${esc((r.discounts || []).join(' + '))}</div>` : ''}<div class="co-meta">${r.km} km · ${since(r.updated)}</div><div class="co-go">Directions</div>`;
     div.querySelector('.co-go').addEventListener('click', () => window.open(this._dirUrl(r), '_blank'));
     return div;
   }

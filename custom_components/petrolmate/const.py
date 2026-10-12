@@ -15,6 +15,8 @@ CONF_NETWORKS = "networks"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_MOVE_DISTANCE = "move_distance"
 CONF_BRANDS_PREFIX = "brands_"
+CONF_STATES = "states"
+CONF_DISCOUNTS = "discounts"
 
 DEFAULT_NAME = "Petrolmate"
 DEFAULT_LOCATION_ENTITY = "zone.home"
@@ -35,13 +37,42 @@ FUELS: dict[str, dict] = {
     "LPG": {"name": "LPG", "codes": ["LPG"]},
 }
 
-# Fuel card networks → station brands (as the API reports them, matched case-insensitively).
+# The API's `state` codes, in the order offered in setup.
+STATES: dict[str, str] = {
+    "SA": "South Australia", "NSW": "New South Wales", "VIC": "Victoria", "QLD": "Queensland",
+    "WA": "Western Australia", "TAS": "Tasmania", "NT": "Northern Territory", "ACT": "Australian Capital Territory",
+}
+
+# Station brands commonly seen in each state's price feed — the starting pick-list for "where each fuel brand
+# is sold" and for discounts. Not exhaustive: brands seen in the latest search are added, and any name can be typed.
+STATE_BRANDS: dict[str, list[str]] = {
+    "SA": ["OTR", "X Convenience", "BP", "Shell", "Ampol", "EG Ampol", "Ampol Foodary", "Caltex", "Mobil", "United",
+           "Liberty", "Metro Petroleum", "AM/PM", "Perrys", "Solo", "Pearl Energy", "Speedway", "Costco", "Independent"],
+    "NSW": ["7-Eleven", "Ampol", "EG Ampol", "Ampol Foodary", "U-GO", "BP", "Caltex", "Shell", "Reddy Express",
+            "Coles Express", "Metro Petroleum", "United", "Speedway", "Mobil", "Liberty", "Costco", "Budget", "Enhance",
+            "Westside", "Lowes", "Astron", "Inland Petroleum", "Puma Energy", "Independent"],
+    "VIC": ["7-Eleven", "Ampol", "EG Ampol", "Ampol Foodary", "U-GO", "BP", "Caltex", "Shell", "Reddy Express",
+            "Coles Express", "United", "Liberty", "Speedway", "Mobil", "Metro Petroleum", "Apco", "Costco", "Independent"],
+    "QLD": ["7-Eleven", "Puma Energy", "Ampol", "EG Ampol", "Ampol Foodary", "U-GO", "BP", "Caltex", "Shell",
+            "Reddy Express", "Coles Express", "United", "Liberty", "Freedom Fuels", "Mobil", "Metro Petroleum",
+            "Pearl Energy", "Lowes", "Costco", "Independent"],
+    "WA": ["Vibe", "Better Choice", "Puma Energy", "Caltex", "Ampol", "BP", "Shell", "Reddy Express", "United",
+           "7-Eleven", "Liberty", "Gull", "Peak", "X Convenience", "Wesco", "Costco", "Independent"],
+    "TAS": ["Bennett's Petroleum", "Bonney Energy", "Ampol", "BP", "Caltex", "Shell", "United", "Puma Energy",
+            "Astron", "Liberty", "Independent"],
+    "NT": ["United", "Puma Energy", "BP", "Shell", "Ampol", "Caltex", "Liberty", "Independent"],
+    "ACT": ["7-Eleven", "Ampol", "Ampol Foodary", "BP", "Caltex", "Shell", "Reddy Express", "Coles Express",
+            "Mobil", "Costco", "Independent"],
+}
+
+# Fuel brands → the station brands they're sold under (as the API reports them, matched case-insensitively).
+# Internally still called "networks" (config keys, entity unique ids) so existing installs keep working.
 # Defaults are editable per install in the integration options. Logos are hotlinked from Wikimedia at
 # runtime by the card (trademarks aren't shipped); networks without one fall back to their colour.
 NETWORKS: dict[str, dict] = {
     "bp": {"name": "BP", "color": "#009900", "brands": ["BP", "X Convenience"], "logo": "https://upload.wikimedia.org/wikipedia/en/d/d2/BP_Helios_logo.svg"},
     "shell": {"name": "Shell", "color": "#e0b400", "brands": ["Shell", "OTR", "Reddy Express", "Coles Express"], "logo": "https://upload.wikimedia.org/wikipedia/en/e/e8/Shell_logo.svg"},
-    "ampol": {"name": "Ampol", "color": "#e1251b", "brands": ["Ampol", "EG Ampol"], "logo": "https://upload.wikimedia.org/wikipedia/en/4/4e/Ampol_Logo_May_2020.svg"},
+    "ampol": {"name": "Ampol", "color": "#e1251b", "brands": ["Ampol", "EG Ampol", "Ampol Foodary", "U-GO"], "logo": "https://upload.wikimedia.org/wikipedia/en/4/4e/Ampol_Logo_May_2020.svg"},
     "caltex": {"name": "Caltex", "color": "#00a1de", "brands": ["Caltex", "Star Mart", "Caltex Woolworths"], "logo": "https://upload.wikimedia.org/wikipedia/commons/f/f6/Caltex_brand_logo.svg"},
     "7eleven": {"name": "7-Eleven", "color": "#ee7d00", "brands": ["7-Eleven"], "logo": "https://upload.wikimedia.org/wikipedia/commons/e/e0/7-Eleven_logo_2021.svg"},
     "mobil": {"name": "Mobil", "color": "#d6001c", "brands": ["Mobil"], "logo": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Mobil_logo.svg"},
@@ -53,3 +84,5 @@ NETWORKS: dict[str, dict] = {
 }
 
 ATTRIBUTION = "Fuel prices from petrolmate.com.au (state government fuel price feeds)"
+MANUFACTURER = "AJErazzor"
+MODEL = "Fuel prices · petrolmate.com.au data"

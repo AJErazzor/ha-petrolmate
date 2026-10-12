@@ -25,7 +25,7 @@ async def async_setup_entry(
 
 
 class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
-    """Cheapest price for one fuel at the enabled card networks, in c/L."""
+    """Cheapest price (after your discounts) for one fuel at the ticked fuel brands, in c/L."""
 
     _attr_native_unit_of_measurement = "c/L"
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -62,6 +62,9 @@ class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
             "address": best and best["address"],
             "distance_km": best and best["km"],
             "updated": best and best["updated"],
+            "pump_price": best and best["pump_price"],
+            "discount": best and best["discount"],
+            "discounts": best and best["discounts"],
             "maps": best and best["maps"],
             "maps_google": best and best["maps_google"],
             # latitude/longitude put the cheapest station on a map card
@@ -70,7 +73,8 @@ class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
             "top3": s["top3"],
             "closest3": s["closest3"],
             "cheapest_any_brand": s["cheapest_any_brand"],
-            "networks": sorted(c.active_networks()),
+            "networks": sorted(c.enabled_networks),
+            "any_brand": c.any_brand,
             "network_colors": {n: NETWORKS[n]["color"] for n in c.networks},
         }
 
