@@ -65,6 +65,8 @@ type: custom:petrolmate-card
 
 Cheapest stations are numbered **1–3** and closest stations are lettered **A–C**, on both the tiles and the map. A station on both lists shows as **1A**.
 
+**"Custom element doesn't exist" or the card is missing from the card picker?** Restart Home Assistant, then hard-refresh the browser (Ctrl+Shift+R). It can take more than one refresh. In the companion app, use *Settings → Companion app → Debugging → Reset frontend cache*.
+
 ## Entities
 
 For an entry called *Petrolmate*:
