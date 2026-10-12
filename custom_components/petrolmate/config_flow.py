@@ -81,7 +81,6 @@ def _brand_picker(entry: ConfigEntry, states: list[str] | None, chosen: list[str
     Anything else can still be typed."""
     coordinator = getattr(entry, "runtime_data", None)
     seen = coordinator.seen_brands() if coordinator else {}
-    states = states or list(STATE_BRANDS)
     labels: dict[str, tuple[str, str]] = {}  # upper-cased name → (value, label)
 
     def add(name: str, note: str) -> None:
@@ -92,9 +91,10 @@ def _brand_picker(entry: ConfigEntry, states: list[str] | None, chosen: list[str
         add(b, f"{n} nearby" if n else "")
     for b, n in sorted(seen.items(), key=lambda x: -x[1]):
         add(b, f"{n} nearby")
-    for st in states:
+    # no states picked yet → every state's list, without the state tags
+    for st in states or list(STATE_BRANDS):
         for b in STATE_BRANDS.get(st, []):
-            add(b, " · ".join(s for s in states if b in STATE_BRANDS.get(s, [])))
+            add(b, " · ".join(s for s in states or [] if b in STATE_BRANDS.get(s, [])))
     return selector.SelectSelector(selector.SelectSelectorConfig(
         options=[selector.SelectOptionDict(value=v, label=lab) for v, lab in labels.values()],
         multiple=True, custom_value=True, mode=selector.SelectSelectorMode.DROPDOWN))
