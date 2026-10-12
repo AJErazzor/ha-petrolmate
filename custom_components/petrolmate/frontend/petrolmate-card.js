@@ -11,7 +11,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.1.5';
+const PM_VERSION = '0.1.6';
 
 const FUEL_SHORT = { DIESEL: 'Diesel', ULP: 'ULP', E10: 'E10', PULP95: '95', PULP98: '98', LPG: 'LPG' };
 
@@ -64,7 +64,7 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
 .colh{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;margin:4px 4px 0}
 .colh ha-icon{--mdc-icon-size:18px}
 .tile{position:relative;overflow:hidden;cursor:pointer;min-height:64px;padding:8px 10px 8px 12px;border-radius:12px;
-  background:var(--secondary-background-color);border:1px solid var(--divider-color);border-left:4px solid var(--c)}
+  background:var(--secondary-background-color);border:1px solid var(--divider-color)}
 /* logo wash: whole logo fitted in a box on the right, fading out to the left */
 .tile::before{content:'';position:absolute;top:10px;bottom:10px;right:10px;width:min(30%,84px);pointer-events:none;
   background:var(--logo,none) right center/contain no-repeat;opacity:.35;
