@@ -74,7 +74,7 @@ NETWORKS: dict[str, dict] = {
     "bp": {"name": "BP", "color": "#009900", "brands": ["BP", "X Convenience"], "logo": "https://upload.wikimedia.org/wikipedia/en/d/d2/BP_Helios_logo.svg"},
     "shell": {"name": "Shell", "color": "#e0b400", "brands": ["Shell", "OTR", "Reddy Express", "Coles Express"], "logo": "https://upload.wikimedia.org/wikipedia/en/e/e8/Shell_logo.svg"},
     "ampol": {"name": "Ampol", "color": "#e1251b", "brands": ["Ampol", "EG Ampol", "Ampol Foodary", "U-GO"], "logo": "https://upload.wikimedia.org/wikipedia/en/4/4e/Ampol_Logo_May_2020.svg"},
-    "caltex": {"name": "Caltex", "color": "#00a1de", "brands": ["Caltex", "Star Mart", "Caltex Woolworths"], "logo": "https://upload.wikimedia.org/wikipedia/commons/f/f6/Caltex_brand_logo.svg"},
+    "caltex": {"name": "Caltex", "color": "#00a1de", "brands": ["Caltex"], "logo": "https://upload.wikimedia.org/wikipedia/commons/f/f6/Caltex_brand_logo.svg"},
     "7eleven": {"name": "7-Eleven", "color": "#ee7d00", "brands": ["7-Eleven"], "logo": "https://upload.wikimedia.org/wikipedia/commons/e/e0/7-Eleven_logo_2021.svg"},
     "mobil": {"name": "Mobil", "color": "#d6001c", "brands": ["Mobil"], "logo": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Mobil_logo.svg"},
     "united": {"name": "United", "color": "#003da5", "brands": ["United"], "logo": "https://upload.wikimedia.org/wikipedia/en/8/88/United-logo-300.png"},

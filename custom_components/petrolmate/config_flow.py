@@ -180,10 +180,13 @@ class PetrolmateOptionsFlow(OptionsFlow):
         if self._only is not None:
             nets = [n for n in nets if n in self._only]
         if user_input is not None:
+            reset = user_input.get("reset")
             for net in nets:
-                self.opts[f"{CONF_BRANDS_PREFIX}{net}"] = (user_input.get(net) or {}).get("brands") or []
+                self.opts[f"{CONF_BRANDS_PREFIX}{net}"] = (
+                    list(NETWORKS[net]["brands"]) if reset else (user_input.get(net) or {}).get("brands") or []
+                )
             return self._save()
-        fields = {}
+        fields = {vol.Optional("reset", default=False): selector.BooleanSelector()}
         for net in nets:
             current = self.opts.get(f"{CONF_BRANDS_PREFIX}{net}")
             chosen = NETWORKS[net]["brands"] if current is None else split_brands(current)

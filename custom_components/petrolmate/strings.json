@@ -125,6 +125,12 @@
               "brands": "Add station brand"
             }
           }
+        },
+        "data": {
+          "reset": "Reset all to defaults"
+        },
+        "data_description": {
+          "reset": "Replace every list below with the built-in defaults when you submit (e.g. Shell: Shell, OTR, Reddy Express, Coles Express)."
         }
       },
       "discounts": {
