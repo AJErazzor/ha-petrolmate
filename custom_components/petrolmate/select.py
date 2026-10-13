@@ -33,6 +33,7 @@ class FuelSelect(PetrolmateEntity, SelectEntity, RestoreEntity):
         last = await self.async_get_last_state()
         if last and last.state in self._codes:
             self.coordinator.selected_fuel = self._codes[last.state]
+            self.coordinator.async_filters_changed()
 
     @property
     def current_option(self) -> str | None:

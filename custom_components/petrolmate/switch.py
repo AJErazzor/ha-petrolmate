@@ -42,6 +42,7 @@ class NetworkSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
         last = await self.async_get_last_state()
         if last and last.state == "off":
             self.coordinator.enabled_networks.discard(self.network)
+            self.coordinator.async_filters_changed()  # sensors may have been written before this restore
 
     @property
     def is_on(self) -> bool:
@@ -79,6 +80,8 @@ class OtherBrandsSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
         await super().async_added_to_hass()
         last = await self.async_get_last_state()
         self.coordinator.other_brands = bool(last and last.state == "on")
+        if self.coordinator.other_brands:
+            self.coordinator.async_filters_changed()
 
     @property
     def is_on(self) -> bool:
@@ -110,6 +113,8 @@ class AnyBrandSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
         await super().async_added_to_hass()
         last = await self.async_get_last_state()
         self.coordinator.any_brand = bool(last and last.state == "on")
+        if self.coordinator.any_brand:
+            self.coordinator.async_filters_changed()
 
     @property
     def is_on(self) -> bool:
@@ -143,6 +148,7 @@ class DiscountSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
         last = await self.async_get_last_state()
         if last is None or last.state == "on":
             self.coordinator.enabled_discounts.add(self.discount["id"])
+            self.coordinator.async_filters_changed()
 
     @property
     def is_on(self) -> bool:
