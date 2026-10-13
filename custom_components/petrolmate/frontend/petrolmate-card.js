@@ -6,12 +6,22 @@
  *   # all optional:
  *   title: Fuel
  *   entity: select.petrolmate_fuel_type   # pick an entry when you have several
+ *   count: 3                             # stations per column (1–10)
+ *   columns: both                        # both | cheapest | closest
  *   map: true
  *   map_height: 340
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.2.3';
+const PM_VERSION = '0.2.4';
+
+const LETTERS = 'ABCDEFGHIJ';
+// discount colours, in pill order; tiles show a matching dot
+const DISC_COLOURS = ['#14b8a6', '#a855f7', '#ec4899', '#3b82f6', '#f97316', '#84cc16'];
+const DEFAULTS = {
+  title: 'Fuel', entity: '', count: 3, columns: 'both', maps: 'auto', map: true, map_height: 340,
+  show_brands: true, show_fuels: true, show_discounts: true, other_line: true, times: true, logos: true,
+};
 
 const FUEL_SHORT = { DIESEL: 'Diesel', ULP: 'ULP', E10: 'E10', PULP95: '95', PULP98: '98', LPG: 'LPG' };
 
@@ -61,6 +71,9 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
 .chip ha-icon{--mdc-icon-size:18px;color:var(--disabled-text-color, #9e9e9e)}
 .chip.on ha-icon{color:var(--cc)}
 .chip.dim{opacity:.45}
+.dots{display:inline-flex;gap:2px;margin-left:4px;vertical-align:2px}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--dc)}
+.cols.one{grid-template-columns:1fr}
 .cap{margin:2px 4px 4px;text-align:center;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--secondary-text-color)}
 .off{font-size:.8em;font-weight:600;color:var(--success-color,#43a047)}
 .tile .h s,.co-price s{font-size:.8em;font-weight:400;color:var(--secondary-text-color)}
@@ -123,12 +136,14 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
 // bundle starts, and this module can run before that. Defining early lands in a registry HA no longer reads.
 const makeCard = () => class PetrolmateCard extends HTMLElement {
   setConfig(config) {
-    this._config = { title: 'Fuel', map: true, map_height: 340, maps: 'auto', ...config };
+    this._config = { ...DEFAULTS, ...config };
     this._logos = config.logos || {}; // per-network overrides; defaults come from the integration
     this._built = false;
+    this._key = null; this._mkey = null;
   }
 
   static getStubConfig() { return {}; }
+  static getConfigElement() { return document.createElement('petrolmate-card-editor'); }
   getCardSize() { return 12; }
   getGridOptions() { return { columns: 'full' }; }
 
@@ -229,10 +244,13 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     const netChips = (ents.any ? chip(ents.any, 'Any', 'var(--primary-color)') : '')
       + ents.switches.map((e) => chip(e, label(hass.states[e]), hass.states[e].attributes.color, anyOn)).join('')
       + (ents.other ? chip(ents.other, 'Other', '#888', anyOn) : '');
-    const discChips = ents.discounts.map((e) => {
+    const discColour = {};
+    const discChips = ents.discounts.map((e, i) => {
       const at = hass.states[e].attributes;
-      return chip(e, `${at.label} −${at.cents}c`, 'var(--primary-color)');
+      discColour[at.label] = DISC_COLOURS[i % DISC_COLOURS.length];
+      return chip(e, `${at.label} −${at.cents}c`, discColour[at.label]);
     }).join('');
+    this._discColour = discColour;
     const codes = sel.attributes.codes || {};
     const fuelChips = ents.fuelOrder.map((f) => {
       const opt = Object.keys(codes).find((k) => codes[k] === f), on = f === fuel;
@@ -240,32 +258,39 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
         <ha-icon icon="${on ? 'mdi:radiobox-marked' : 'mdi:radiobox-blank'}"></ha-icon>${FUEL_SHORT[f]}</div>`;
     }).join('');
 
-    const top = a.top3 || [], near = a.closest3 || [], best = top[0];
-    // struck pump price + which discounts made the difference
-    const off = (r) => (r.discount > 0 ? ` <s>${money(r.pump_price)}</s> <span class="off">${esc((r.discounts || []).join('+'))}</span>` : '');
-    const tile = (r, lab, head, detail) => r
-      ? `<div class="tile" style="--c:${colour(r)};${logo(r) ? `--logo:url('${logo(r)}')` : ''}" data-act="go" data-val="${esc(this._dirUrl(r))}">
-          <div class="h"><span class="bd">${lab}</span>${head}</div><div class="st">${esc(r.station)}</div><div class="dt">${detail}</div></div>`
+    const cfg = this._config, count = Math.max(1, Math.min(10, +cfg.count || 3));
+    const showC = cfg.columns !== 'closest', showN = cfg.columns !== 'cheapest';
+    const allTop = a.top || a.top3 || [], best = allTop[0];
+    const top = showC ? allTop.slice(0, count) : [], near = showN ? (a.closest || a.closest3 || []).slice(0, count) : [];
+    // a dot per discount applied, coloured like its pill
+    const dots = (r) => (r.discount > 0
+      ? `<span class="dots" title="${esc((r.discounts || []).join(' + '))}">${(r.discounts || []).map((n) => `<i style="--dc:${discColour[n] || '#888'}"></i>`).join('')}</span>` : '');
+    const vs = (r) => { const d = best ? r.price - best.price : 0; return d > 0.05 ? `+${+d.toFixed(1)}c vs cheapest` : 'cheapest'; };
+    const detail = (...parts) => parts.filter(Boolean).join(' · ');
+    const tile = (r, lab, head, dt) => r
+      ? `<div class="tile" style="--c:${colour(r)};${cfg.logos && logo(r) ? `--logo:url('${logo(r)}')` : ''}" data-act="go" data-val="${esc(this._dirUrl(r))}">
+          <div class="h"><span class="bd">${lab}</span>${head}</div><div class="st">${esc(r.station)}</div>${dt ? `<div class="dt">${dt}</div>` : ''}</div>`
       : `<div class="tile empty"></div>`;
     let tiles = '';
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < count; i++) {
       const c = top[i], n = near[i];
-      tiles += tile(c, i + 1, c && `<b>${money(c.price)}</b>${off(c)} · ${c.km} km`, c && since(c.updated));
-      const d = n && best ? n.price - best.price : 0;
-      tiles += tile(n, 'ABC'[i], n && `<b>${n.km} km</b> · ${money(n.price)}${off(n)}`, n && `${d > 0.05 ? `+${+d.toFixed(1)}c vs cheapest` : 'cheapest'} · ${since(n.updated)}`);
+      if (showC) tiles += tile(c, i + 1, c && `<b>${money(c.price)}</b>${c.discount > 0 ? ` <s>${money(c.pump_price)}</s>` : ''}${dots(c)} · ${c.km} km`,
+        c && detail(i > 0 && vs(c) !== 'cheapest' && vs(c), cfg.times && since(c.updated)));
+      if (showN) tiles += tile(n, LETTERS[i], n && `<b>${n.km} km</b> · ${money(n.price)}${dots(n)}`,
+        n && detail(vs(n), cfg.times && since(n.updated)));
     }
     const any = a.cheapest_any_brand;
-    const anyLine = !anyOn && any && best && any.price < best.price
+    const anyLine = cfg.other_line && !anyOn && any && best && any.price < best.price
       ? `<div class="any" data-act="go" data-val="${esc(this._dirUrl(any))}">Cheapest at other brands: <b>${money(any.price)}</b> at ${esc(any.station)} · ${any.km} km · ${money(best.price - any.price)} cheaper</div>` : '';
 
     dyn.innerHTML = `
       <div class="hdr"><span class="t">${esc(this._config.title)}</span>${ents.refresh ? `<ha-icon icon="mdi:refresh" data-act="refresh" data-ent="${ents.refresh}" title="Refresh"></ha-icon>` : ''}</div>
-      <div class="cap">Fuel brands</div><div class="chips">${netChips}</div>
-      <div class="cap">Fuel</div><div class="chips">${fuelChips}</div>
-      ${discChips ? `<div class="cap">My discounts</div><div class="chips">${discChips}</div>` : ''}
-      <div class="cols">
-        <div class="colh"><ha-icon icon="mdi:currency-usd"></ha-icon>Cheapest</div>
-        <div class="colh"><ha-icon icon="mdi:map-marker-distance"></ha-icon>Closest</div>
+      ${cfg.show_brands ? `<div class="cap">Fuel brands</div><div class="chips">${netChips}</div>` : ''}
+      ${cfg.show_fuels ? `<div class="cap">Fuel</div><div class="chips">${fuelChips}</div>` : ''}
+      ${cfg.show_discounts && discChips ? `<div class="cap">My discounts</div><div class="chips">${discChips}</div>` : ''}
+      <div class="cols ${showC && showN ? '' : 'one'}">
+        ${showC ? '<div class="colh"><ha-icon icon="mdi:currency-usd"></ha-icon>Cheapest</div>' : ''}
+        ${showN ? '<div class="colh"><ha-icon icon="mdi:map-marker-distance"></ha-icon>Closest</div>' : ''}
         ${top.length || near.length ? tiles : ''}
       </div>
       ${top.length || near.length ? '' : `<div class="none">No ${esc(a.fuel_name || 'fuel')} at your fuel brands nearby</div>`}
@@ -379,7 +404,7 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
   }
 
   _icon(r, pos) {
-    const label = (r.cheap != null ? String(r.cheap + 1) : '') + (r.near != null ? 'ABC'[r.near] : '');
+    const label = (r.cheap != null ? String(r.cheap + 1) : '') + (r.near != null ? LETTERS[r.near] : '');
     return window.L.divIcon({
       className: '', iconSize: [0, 0], iconAnchor: [0, 0], popupAnchor: [0, pos === 'down' ? 6 : -36],
       html: `<div class="mk ${r.cheap === 0 ? 'best' : ''}" style="--c:${this._colour(r)}"><div class="dot"></div>
@@ -389,7 +414,7 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
 
   _callout(r) {
     const div = document.createElement('div');
-    const tags = [r.cheap != null ? 'Cheapest ' + (r.cheap + 1) : '', r.near != null ? 'Closest ' + 'ABC'[r.near] : ''].filter(Boolean).join(' · ');
+    const tags = [r.cheap != null ? 'Cheapest ' + (r.cheap + 1) : '', r.near != null ? 'Closest ' + LETTERS[r.near] : ''].filter(Boolean).join(' · ');
     div.innerHTML = `<div class="co-name">${esc(r.station)}</div><div class="co-addr">${esc(r.address)}</div><div class="co-meta">${tags}</div>
       <div class="co-price">${money(r.price)} <small>/L</small>${r.discount > 0 ? ` <s>${money(r.pump_price)}</s>` : ''}</div>
       ${r.discount > 0 ? `<div class="co-meta">−${r.discount}c ${esc((r.discounts || []).join(' + '))}</div>` : ''}<div class="co-meta">${r.km} km · ${since(r.updated)}</div><div class="co-go">Directions</div>`;
@@ -423,8 +448,69 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
   }
 };
 
+// ---- visual editor: HA's own form, filled with the defaults so toggles show their real state ----
+const EDITOR_SCHEMA = [
+  { name: 'title', selector: { text: {} } },
+  { name: 'entity', selector: { entity: { filter: { integration: 'petrolmate', domain: 'select' } } } },
+  { type: 'grid', name: '', schema: [
+    { name: 'count', selector: { number: { min: 1, max: 10, mode: 'box' } } },
+    { name: 'columns', selector: { select: { mode: 'dropdown', options: [
+      { value: 'both', label: 'Cheapest and closest' }, { value: 'cheapest', label: 'Cheapest only' }, { value: 'closest', label: 'Closest only' }] } } },
+  ] },
+  { name: 'maps', selector: { select: { mode: 'dropdown', options: [
+    { value: 'auto', label: 'Auto (Apple on iPhone/iPad/Mac, Google elsewhere)' }, { value: 'apple', label: 'Apple Maps' }, { value: 'google', label: 'Google Maps' }] } } },
+  { type: 'grid', name: '', schema: [
+    { name: 'map', selector: { boolean: {} } },
+    { name: 'map_height', selector: { number: { min: 150, max: 900, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
+  ] },
+  { type: 'expandable', name: '', title: 'Show on the card', flatten: true, schema: [
+    { name: 'show_brands', selector: { boolean: {} } },
+    { name: 'show_fuels', selector: { boolean: {} } },
+    { name: 'show_discounts', selector: { boolean: {} } },
+    { name: 'other_line', selector: { boolean: {} } },
+    { name: 'times', selector: { boolean: {} } },
+    { name: 'logos', selector: { boolean: {} } },
+  ] },
+];
+const EDITOR_LABELS = {
+  title: 'Title', entity: 'Petrolmate entry (fuel type select) — only needed with more than one',
+  count: 'Stations per column', columns: 'Columns', maps: 'Directions app', map: 'Show map', map_height: 'Map height',
+  show_brands: 'Fuel brand pills', show_fuels: 'Fuel pills', show_discounts: 'Discount pills',
+  other_line: '"Cheapest at other brands" line', times: '"since…" times', logos: 'Brand logos',
+};
+
+const makeEditor = () => class PetrolmateCardEditor extends HTMLElement {
+  setConfig(config) { this._config = config; this._render(); }
+  set hass(hass) { this._hass = hass; this._render(); }
+
+  _render() {
+    if (!this._hass || !this._config) return;
+    if (!this._form) {
+      this._form = document.createElement('ha-form');
+      this._form.schema = EDITOR_SCHEMA;
+      this._form.computeLabel = (s) => EDITOR_LABELS[s.name] || s.title || s.name;
+      this._form.addEventListener('value-changed', (ev) => this._changed(ev.detail.value));
+      this.appendChild(this._form);
+    }
+    this._form.hass = this._hass;
+    this._form.data = { ...DEFAULTS, ...this._config };
+  }
+
+  // keep the YAML short: only write settings that differ from the defaults
+  _changed(value) {
+    const config = { type: this._config.type };
+    for (const [k, v] of Object.entries(value)) {
+      if (k === 'type' || v === undefined || v === '' || v === DEFAULTS[k]) continue;
+      config[k] = v;
+    }
+    this._config = config;
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config }, bubbles: true, composed: true }));
+  }
+};
+
 function registerCard() {
   if (customElements.get('petrolmate-card')) return;
+  customElements.define('petrolmate-card-editor', makeEditor());
   customElements.define('petrolmate-card', makeCard());
   window.customCards = window.customCards || [];
   window.customCards.push({ type: 'petrolmate-card', name: 'Petrolmate', description: 'Cheapest and closest fuel at your card networks, with a map', preview: false });

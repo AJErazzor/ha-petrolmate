@@ -45,6 +45,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+MAX_LIST = 10  # stations kept per list; the card shows as many as its `count` asks for
 MIN_MOVE_REFRESH_SECONDS = 120  # don't re-query more often than this when moving
 
 
@@ -262,9 +263,12 @@ class PetrolmateCoordinator(DataUpdateCoordinator[PetrolmateData]):
     def summary(self, fuel: str) -> dict[str, Any]:
         rows = self.rows(fuel)
         card = [r for r in rows if r["card"]]
+        closest = sorted(card, key=lambda r: (r["km"], r["price"]))
         return {
-            "top3": card[:3],
-            "closest3": sorted(card, key=lambda r: (r["km"], r["price"]))[:3],
+            "top": card[:MAX_LIST],
+            "closest": closest[:MAX_LIST],
+            "top3": card[:3],  # kept for existing automations/templates
+            "closest3": closest[:3],
             "cheapest_any_brand": rows[0] if rows else None,
         }
 
