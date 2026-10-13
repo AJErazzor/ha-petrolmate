@@ -11,7 +11,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.2.2';
+const PM_VERSION = '0.2.3';
 
 const FUEL_SHORT = { DIESEL: 'Diesel', ULP: 'ULP', E10: 'E10', PULP95: '95', PULP98: '98', LPG: 'LPG' };
 
@@ -62,8 +62,8 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
 .chip.on ha-icon{color:var(--cc)}
 .chip.dim{opacity:.45}
 .cap{margin:2px 4px 4px;text-align:center;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--secondary-text-color)}
-.off{font-size:.8em;font-weight:700;color:var(--success-color,#43a047)}
-.co-price s{font-size:.8em;font-weight:400;color:var(--secondary-text-color)}
+.off{font-size:.8em;font-weight:600;color:var(--success-color,#43a047)}
+.tile .h s,.co-price s{font-size:.8em;font-weight:400;color:var(--secondary-text-color)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .colh{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;margin:4px 4px 0}
 .colh ha-icon{--mdc-icon-size:18px}
@@ -75,7 +75,7 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
   -webkit-mask-image:linear-gradient(to right,transparent,#000 70%);mask-image:linear-gradient(to right,transparent,#000 70%)}
 .tile>*{position:relative}
 .tile.empty{visibility:hidden}
-.tile .h{font-size:15px;white-space:nowrap}
+.tile .h{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .st{font-size:12.5px;font-weight:600;line-height:1.25;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tile .dt{font-size:11px;color:var(--secondary-text-color);margin-top:2px}
 .bd{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 3px;box-sizing:border-box;border-radius:9px;
@@ -241,8 +241,8 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     }).join('');
 
     const top = a.top3 || [], near = a.closest3 || [], best = top[0];
-    // discount tag sits where a struck pump price would; names + pump price are in the map pop-up
-    const off = (r) => (r.discount > 0 ? ` <span class="off">−${r.discount}c</span>` : '');
+    // struck pump price + which discounts made the difference
+    const off = (r) => (r.discount > 0 ? ` <s>${money(r.pump_price)}</s> <span class="off">${esc((r.discounts || []).join('+'))}</span>` : '');
     const tile = (r, lab, head, detail) => r
       ? `<div class="tile" style="--c:${colour(r)};${logo(r) ? `--logo:url('${logo(r)}')` : ''}" data-act="go" data-val="${esc(this._dirUrl(r))}">
           <div class="h"><span class="bd">${lab}</span>${head}</div><div class="st">${esc(r.station)}</div><div class="dt">${detail}</div></div>`
