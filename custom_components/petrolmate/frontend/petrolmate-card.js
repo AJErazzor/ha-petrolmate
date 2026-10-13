@@ -13,7 +13,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.2.5';
+const PM_VERSION = '0.2.6';
 
 const LETTERS = 'ABCDEFGHIJ';
 // discount colours, in pill order; tiles show a matching dot
@@ -89,7 +89,10 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
   -webkit-mask-image:linear-gradient(to right,transparent,#000 70%);mask-image:linear-gradient(to right,transparent,#000 70%)}
 .tile>*{position:relative}
 .tile.empty{visibility:hidden}
-.tile .h{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .h{font-size:15px}
+.tile .h .g{white-space:nowrap}
+/* cheapest, or tied with it: the same double ring as its map bubble */
+.tile.best{box-shadow:0 0 0 2px var(--card-background-color),0 0 0 4px var(--c)}
 .tile .st{font-size:12.5px;font-weight:600;line-height:1.25;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tile .dt{font-size:11px;color:var(--secondary-text-color);margin-top:2px}
 .bd{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 3px;box-sizing:border-box;border-radius:9px;
@@ -266,19 +269,22 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     // a dot per discount applied, coloured like its pill
     const dots = (r) => (r.discount > 0
       ? `<span class="dots" title="${esc((r.discounts || []).join(' + '))}">${(r.discounts || []).map((n) => `<i style="--dc:${discColour[n] || '#888'}"></i>`).join('')}</span>` : '');
+    this._best = best ? best.price : null;
+    const isBest = (r) => this._best != null && r.price <= this._best + 0.05;
     const strike = (r) => (r.discount > 0 ? `<s>${money(r.pump_price)}</s>` : '');
     const vs = (r) => { const d = best ? r.price - best.price : 0; return d > 0.05 ? `+${+d.toFixed(1)}c vs cheapest` : 'cheapest'; };
     const detail = (...parts) => parts.filter(Boolean).join(' · ');
+    // head = [first, second]: each group stays on one line; the second wraps below when the tile is narrow
     const tile = (r, lab, head, dt) => r
-      ? `<div class="tile" style="--c:${colour(r)};${cfg.logos && logo(r) ? `--logo:url('${logo(r)}')` : ''}" data-act="go" data-val="${esc(this._dirUrl(r))}">
-          <div class="h"><span class="bd">${lab}</span>${head}</div><div class="st">${esc(r.station)}</div>${dt ? `<div class="dt">${dt}</div>` : ''}</div>`
+      ? `<div class="tile ${isBest(r) ? 'best' : ''}" style="--c:${colour(r)};${cfg.logos && logo(r) ? `--logo:url('${logo(r)}')` : ''}" data-act="go" data-val="${esc(this._dirUrl(r))}">
+          <div class="h"><span class="g"><span class="bd">${lab}</span>${head[0]}</span> <span class="g">${head[1]}</span></div><div class="st">${esc(r.station)}</div>${dt ? `<div class="dt">${dt}</div>` : ''}</div>`
       : `<div class="tile empty"></div>`;
     let tiles = '';
     for (let i = 0; i < count; i++) {
       const c = top[i], n = near[i];
-      if (showC) tiles += tile(c, i + 1, c && `<b>${money(c.price)}</b>${strike(c)}${dots(c)} · ${c.km} km`,
+      if (showC) tiles += tile(c, i + 1, c && [`<b>${money(c.price)}</b>${strike(c)}${dots(c)}`, `· ${c.km} km`],
         c && detail(i > 0 && vs(c) !== 'cheapest' && vs(c), cfg.times && since(c.updated)));
-      if (showN) tiles += tile(n, LETTERS[i], n && `<b>${n.km}km</b> · ${money(n.price)}${strike(n)}${dots(n)}`,
+      if (showN) tiles += tile(n, LETTERS[i], n && [`<b>${n.km}km</b> ·`, `${money(n.price)}${strike(n)}${dots(n)}`],
         n && detail(vs(n), cfg.times && since(n.updated)));
     }
     const any = a.cheapest_any_brand;
@@ -409,7 +415,7 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     const label = (r.cheap != null ? String(r.cheap + 1) : '') + (r.near != null ? LETTERS[r.near] : '');
     return window.L.divIcon({
       className: '', iconSize: [0, 0], iconAnchor: [0, 0], popupAnchor: [0, pos === 'down' ? 6 : -36],
-      html: `<div class="mk ${r.cheap === 0 ? 'best' : ''}" style="--c:${this._colour(r)}"><div class="dot"></div>
+      html: `<div class="mk ${this._best != null && r.price <= this._best + 0.05 ? 'best' : ''}" style="--c:${this._colour(r)}"><div class="dot"></div>
         <div class="bub ${pos}"><span class="lb">${label}</span>${money(r.price)}</div></div>`,
     });
   }
