@@ -13,7 +13,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.2.4';
+const PM_VERSION = '0.2.5';
 
 const LETTERS = 'ABCDEFGHIJ';
 // discount colours, in pill order; tiles show a matching dot
@@ -76,7 +76,8 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
 .cols.one{grid-template-columns:1fr}
 .cap{margin:2px 4px 4px;text-align:center;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--secondary-text-color)}
 .off{font-size:.8em;font-weight:600;color:var(--success-color,#43a047)}
-.tile .h s,.co-price s{font-size:.8em;font-weight:400;color:var(--secondary-text-color)}
+.tile .h s{font-size:.7em;font-weight:400;color:var(--secondary-text-color);margin-left:3px}
+.co-price s{font-size:.8em;font-weight:400;color:var(--secondary-text-color)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .colh{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;margin:4px 4px 0}
 .colh ha-icon{--mdc-icon-size:18px}
@@ -265,6 +266,7 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     // a dot per discount applied, coloured like its pill
     const dots = (r) => (r.discount > 0
       ? `<span class="dots" title="${esc((r.discounts || []).join(' + '))}">${(r.discounts || []).map((n) => `<i style="--dc:${discColour[n] || '#888'}"></i>`).join('')}</span>` : '');
+    const strike = (r) => (r.discount > 0 ? `<s>${money(r.pump_price)}</s>` : '');
     const vs = (r) => { const d = best ? r.price - best.price : 0; return d > 0.05 ? `+${+d.toFixed(1)}c vs cheapest` : 'cheapest'; };
     const detail = (...parts) => parts.filter(Boolean).join(' · ');
     const tile = (r, lab, head, dt) => r
@@ -274,9 +276,9 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     let tiles = '';
     for (let i = 0; i < count; i++) {
       const c = top[i], n = near[i];
-      if (showC) tiles += tile(c, i + 1, c && `<b>${money(c.price)}</b>${c.discount > 0 ? ` <s>${money(c.pump_price)}</s>` : ''}${dots(c)} · ${c.km} km`,
+      if (showC) tiles += tile(c, i + 1, c && `<b>${money(c.price)}</b>${strike(c)}${dots(c)} · ${c.km} km`,
         c && detail(i > 0 && vs(c) !== 'cheapest' && vs(c), cfg.times && since(c.updated)));
-      if (showN) tiles += tile(n, LETTERS[i], n && `<b>${n.km} km</b> · ${money(n.price)}${dots(n)}`,
+      if (showN) tiles += tile(n, LETTERS[i], n && `<b>${n.km}km</b> · ${money(n.price)}${strike(n)}${dots(n)}`,
         n && detail(vs(n), cfg.times && since(n.updated)));
     }
     const any = a.cheapest_any_brand;
