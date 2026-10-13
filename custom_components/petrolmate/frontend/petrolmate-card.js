@@ -13,14 +13,14 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '1.1.4';
+const PM_VERSION = '1.1.5';
 
 const LETTERS = 'ABCDEFGHIJ';
 // discount colours, in pill order; tiles show a matching dot
 const DISC_COLOURS = ['#14b8a6', '#a855f7', '#ec4899', '#3b82f6', '#f97316', '#84cc16'];
 const DEFAULTS = {
   title: 'Fuel', entity: '', count: 3, columns: 'both', maps: 'auto', map: true, map_height: 340,
-  show_brands: true, show_fuels: true, show_discounts: true, other_line: true, times: true, logos: true,
+  show_brands: true, show_any: true, show_other: true, show_fuels: true, show_discounts: true, other_line: true, times: true, logos: true,
 };
 
 const FUEL_SHORT = { DIESEL: 'Diesel', ULP: 'ULP', E10: 'E10', PULP95: '95', PULP98: '98', LPG: 'LPG' };
@@ -243,9 +243,9 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
       return `<div class="chip ${on ? 'on' : ''} ${dim ? 'dim' : ''}" style="--cc:${colour}" data-act="toggle" data-ent="${e}">
         <ha-icon icon="${on ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'}"></ha-icon>${esc(label)}</div>`;
     };
-    const netChips = (ents.any ? chip(ents.any, 'Any', 'var(--primary-color)') : '')
+    const netChips = (ents.any && this._config.show_any ? chip(ents.any, 'Any', 'var(--primary-color)') : '')
       + ents.switches.map((e) => chip(e, hass.states[e].attributes.label, hass.states[e].attributes.color, anyOn)).join('')
-      + (ents.other ? chip(ents.other, 'Other', '#888', anyOn) : '');
+      + (ents.other && this._config.show_other ? chip(ents.other, 'Other', '#888', anyOn) : '');
     const discColour = {};
     const discChips = ents.discounts.map((e, i) => {
       const at = hass.states[e].attributes;
@@ -471,6 +471,8 @@ const EDITOR_SCHEMA = [
   ] },
   { type: 'expandable', name: '', title: 'Show on the card', flatten: true, schema: [
     { name: 'show_brands', selector: { boolean: {} } },
+    { name: 'show_any', selector: { boolean: {} } },
+    { name: 'show_other', selector: { boolean: {} } },
     { name: 'show_fuels', selector: { boolean: {} } },
     { name: 'show_discounts', selector: { boolean: {} } },
     { name: 'other_line', selector: { boolean: {} } },
@@ -481,7 +483,7 @@ const EDITOR_SCHEMA = [
 const EDITOR_LABELS = {
   title: 'Title', entity: 'Petrolmate entry (fuel type select) — only needed with more than one',
   count: 'Stations per column', columns: 'Columns', maps: 'Directions app', map: 'Show map', map_height: 'Map height',
-  show_brands: 'Fuel brand pills', show_fuels: 'Fuel pills', show_discounts: 'Discount pills',
+  show_brands: 'Fuel brand pills', show_any: '"Any" pill', show_other: '"Other" pill', show_fuels: 'Fuel pills', show_discounts: 'Discount pills',
   other_line: '"Cheapest at other brands" line', times: '"since…" times', logos: 'Brand logos',
 };
 

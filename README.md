@@ -81,6 +81,8 @@ type: custom:petrolmate-card
 
 Everything below is in the card's visual editor; in YAML only the settings you change are needed.
 
+<p align="center"><img src="docs/screenshots/card-editor.jpg" width="340" alt="Petrolmate card visual editor"></p>
+
 | Option | Default | |
 |---|---|---|
 | `title` | `Fuel` | |
@@ -91,6 +93,7 @@ Everything below is in the card's visual editor; in YAML only the settings you c
 | `map` | `true` | Show the map. |
 | `map_height` | `340` | Height in pixels. |
 | `show_brands` / `show_fuels` / `show_discounts` | `true` | Show each row of pills. |
+| `show_any` / `show_other` | `true` | Show the *Any* and *Other* pills. Hiding a pill doesn't change its switch. |
 | `other_line` | `true` | Show the "Cheapest at other brands" line. |
 | `times` | `true` | Show when each price was set ("since Thu"). |
 | `logos` | `true` | Show brand logos on the tiles. YAML only: `logos: { bp: /local/bp.svg }` overrides one. |
