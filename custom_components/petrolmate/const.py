@@ -47,12 +47,13 @@ STATES: dict[str, str] = {
 # is sold" and for discounts. Not exhaustive: brands seen in the latest search are added, and any name can be typed.
 STATE_BRANDS: dict[str, list[str]] = {
     "SA": ["OTR", "X Convenience", "BP", "Shell", "Ampol", "EG Ampol", "Ampol Foodary", "Caltex", "Mobil", "United",
-           "Liberty", "Metro Petroleum", "AM/PM", "Perrys", "Solo", "Pearl Energy", "Speedway", "Costco", "Independent"],
+           "Liberty", "Metro Petroleum", "AM/PM", "Perrys", "Solo", "Mogas", "Budget", "Pearl Energy", "Speedway", "Costco",
+           "Independent"],
     "NSW": ["7-Eleven", "Ampol", "EG Ampol", "Ampol Foodary", "U-GO", "BP", "Caltex", "Shell", "Reddy Express",
             "Coles Express", "Metro Petroleum", "United", "Speedway", "Mobil", "Liberty", "Costco", "Budget", "Enhance",
             "Westside", "Lowes", "Astron", "Inland Petroleum", "Puma Energy", "Independent"],
     "VIC": ["7-Eleven", "Ampol", "EG Ampol", "Ampol Foodary", "U-GO", "BP", "Caltex", "Shell", "Reddy Express",
-            "Coles Express", "United", "Liberty", "Speedway", "Mobil", "Metro Petroleum", "Apco", "Costco", "Independent"],
+            "Coles Express", "United", "Liberty", "Speedway", "Mobil", "Metro Petroleum", "Apco", "Mogas", "Costco", "Independent"],
     "QLD": ["7-Eleven", "Puma Energy", "Ampol", "EG Ampol", "Ampol Foodary", "U-GO", "BP", "Caltex", "Shell",
             "Reddy Express", "Coles Express", "United", "Liberty", "Freedom Fuels", "Mobil", "Metro Petroleum",
             "Pearl Energy", "Lowes", "Costco", "Independent"],

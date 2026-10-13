@@ -75,6 +75,7 @@ class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
             "cheapest_any_brand": s["cheapest_any_brand"],
             "networks": sorted(c.enabled_networks),
             "any_brand": c.any_brand,
+            "other_brands": c.other_brands,
             "network_colors": {n: NETWORKS[n]["color"] for n in c.networks},
         }
 

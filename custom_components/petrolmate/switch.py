@@ -21,7 +21,7 @@ async def async_setup_entry(
     c = entry.runtime_data
     async_add_entities(
         [NetworkSwitch(c, net) for net in c.networks]
-        + [AnyBrandSwitch(c)]
+        + [OtherBrandsSwitch(c), AnyBrandSwitch(c)]
         + [DiscountSwitch(c, d) for d in c.discounts]
     )
 
@@ -66,6 +66,37 @@ class NetworkSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
         self.coordinator.async_filters_changed()
 
 
+class OtherBrandsSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
+    """Also count stations whose brand isn't assigned to any fuel brand (new or independent brands). Off by default."""
+
+    _attr_icon = "mdi:gas-station-outline"
+    _attr_name = "Other brands"
+
+    def __init__(self, coordinator: PetrolmateCoordinator) -> None:
+        super().__init__(coordinator, "other_brands")
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        last = await self.async_get_last_state()
+        self.coordinator.other_brands = bool(last and last.state == "on")
+
+    @property
+    def is_on(self) -> bool:
+        return self.coordinator.other_brands
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"other_brands": True}
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self.coordinator.other_brands = True
+        self.coordinator.async_filters_changed()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self.coordinator.other_brands = False
+        self.coordinator.async_filters_changed()
+
+
 class AnyBrandSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
     """Ignore the fuel brand ticks and count every station — for road trips."""
 
@@ -98,7 +129,7 @@ class AnyBrandSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
 
 
 class DiscountSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
-    """Apply one of My Discounts — switch it on while you hold the docket/voucher. Off by default."""
+    """Apply one of My Discounts. On when first added; switch it off when you don't have the docket/voucher."""
 
     _attr_icon = "mdi:ticket-percent-outline"
 
@@ -110,7 +141,7 @@ class DiscountSwitch(PetrolmateEntity, SwitchEntity, RestoreEntity):
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         last = await self.async_get_last_state()
-        if last and last.state == "on":
+        if last is None or last.state == "on":
             self.coordinator.enabled_discounts.add(self.discount["id"])
 
     @property

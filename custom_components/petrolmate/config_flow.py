@@ -10,6 +10,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers import selector
 
 from .const import (
@@ -86,9 +87,8 @@ def _brand_picker(entry: ConfigEntry, states: list[str] | None, chosen: list[str
     def add(name: str, note: str) -> None:
         labels.setdefault(name.upper(), (name, f"{name} · {note}" if note else name))
 
-    for b in chosen:
-        n = next((v for k, v in seen.items() if k.upper() == b.upper()), 0)
-        add(b, f"{n} nearby" if n else "")
+    for b in chosen:  # plain names: the label is also what the chip shows once picked
+        add(b, "")
     for b, n in sorted(seen.items(), key=lambda x: -x[1]):
         add(b, f"{n} nearby")
     # no states picked yet → every state's list, without the state tags
@@ -126,6 +126,7 @@ class PetrolmateOptionsFlow(OptionsFlow):
 
     def __init__(self) -> None:
         self._opts: dict[str, Any] | None = None
+        self._only: list[str] | None = None  # fuel brands to show on the brands page (None = all)
         self._editing: str | None = None  # id of the discount being edited; None = adding
 
     @property
@@ -149,7 +150,13 @@ class PetrolmateOptionsFlow(OptionsFlow):
         if user_input is not None:
             errors = _validate(user_input)
             if not errors:
+                before = set(self.opts.get(CONF_NETWORKS, DEFAULT_NETWORKS))
                 self.opts.update(user_input)
+                # only stop at the brands page for newly ticked fuel brands, to check their defaults
+                added = [n for n in user_input[CONF_NETWORKS] if n not in before]
+                if not added:
+                    return self._save()
+                self._only = added
                 return await self.async_step_brands()
         d = {**self.opts, **(user_input or {})}
         if CONF_STATES not in d:  # installs from before states existed
@@ -168,21 +175,22 @@ class PetrolmateOptionsFlow(OptionsFlow):
     # ---- where each fuel brand is sold ----
 
     async def async_step_brands(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """One section per fuel brand, each with its station brands."""
         nets = [n for n in self.opts.get(CONF_NETWORKS, DEFAULT_NETWORKS) if n in NETWORKS]
+        if self._only is not None:
+            nets = [n for n in nets if n in self._only]
         if user_input is not None:
-            self.opts.update(user_input)
+            for net in nets:
+                self.opts[f"{CONF_BRANDS_PREFIX}{net}"] = (user_input.get(net) or {}).get("brands") or []
             return self._save()
         fields = {}
         for net in nets:
-            key = f"{CONF_BRANDS_PREFIX}{net}"
-            current = self.opts.get(key)
+            current = self.opts.get(f"{CONF_BRANDS_PREFIX}{net}")
             chosen = NETWORKS[net]["brands"] if current is None else split_brands(current)
-            fields[vol.Required(key, default=chosen)] = _brand_picker(self.config_entry, self.opts.get(CONF_STATES), chosen)
-        return self.async_show_form(
-            step_id="brands",
-            data_schema=vol.Schema(fields),
-            description_placeholders={"networks": ", ".join(NETWORKS[n]["name"] for n in nets)},
-        )
+            fields[vol.Required(net)] = section(vol.Schema({
+                vol.Optional("brands", default=chosen): _brand_picker(self.config_entry, self.opts.get(CONF_STATES), chosen),
+            }), {"collapsed": False})
+        return self.async_show_form(step_id="brands", data_schema=vol.Schema(fields))
 
     # ---- My Discounts ----
 

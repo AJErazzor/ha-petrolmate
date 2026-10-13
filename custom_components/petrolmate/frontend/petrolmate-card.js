@@ -11,7 +11,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.2.0';
+const PM_VERSION = '0.2.1';
 
 const FUEL_SHORT = { DIESEL: 'Diesel', ULP: 'ULP', E10: 'E10', PULP95: '95', PULP98: '98', LPG: 'LPG' };
 
@@ -61,6 +61,7 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
 .chip ha-icon{--mdc-icon-size:18px;color:var(--disabled-text-color, #9e9e9e)}
 .chip.on ha-icon{color:var(--cc)}
 .chip.dim{opacity:.45}
+.cap{margin:2px 4px 4px;text-align:center;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--secondary-text-color)}
 .tile .h s,.co-price s{font-size:.8em;font-weight:400;color:var(--secondary-text-color)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .colh{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;margin:4px 4px 0}
@@ -153,20 +154,21 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     const dev = reg[select] && reg[select].device_id;
     const mine = Object.keys(reg).filter((e) => reg[e].platform === 'petrolmate' && (!dev || reg[e].device_id === dev) && hass.states[e]);
     const fuels = {}, switches = [], discounts = [];
-    let stations = null, refresh = null, any = null;
+    let stations = null, refresh = null, any = null, other = null;
     for (const e of mine) {
       const a = hass.states[e].attributes;
       if (e.startsWith('sensor.') && a.fuel) fuels[a.fuel] = e;
       else if (e.startsWith('sensor.') && 'location_entity' in a) stations = e;
       else if (e.startsWith('switch.') && a.network) switches.push(e);
       else if (e.startsWith('switch.') && a.any_brand) any = e;
+      else if (e.startsWith('switch.') && a.other_brands) other = e;
       else if (e.startsWith('switch.') && a.discount) discounts.push(e);
       else if (e.startsWith('button.')) refresh = e;
     }
     const order = Object.keys(FUEL_SHORT);
     switches.sort((a, b) => hass.states[a].attributes.network.localeCompare(hass.states[b].attributes.network));
     discounts.sort((a, b) => String(hass.states[a].attributes.label).localeCompare(hass.states[b].attributes.label));
-    return { select, fuels, fuelOrder: order.filter((f) => fuels[f]), switches, any, discounts, stations, refresh, all: [select, ...mine] };
+    return { select, fuels, fuelOrder: order.filter((f) => fuels[f]), switches, any, other, discounts, stations, refresh, all: [select, ...mine] };
   }
 
   _build() {
@@ -224,7 +226,8 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     // older versions named the switch "<brand> card" and had no label attribute
     const label = (s) => s.attributes.label || (s.attributes.friendly_name || '').replace(/^.*? (\S+)(?: card)?$/i, '$1');
     const netChips = (ents.any ? chip(ents.any, 'Any', 'var(--primary-color)') : '')
-      + ents.switches.map((e) => chip(e, label(hass.states[e]), hass.states[e].attributes.color, anyOn)).join('');
+      + ents.switches.map((e) => chip(e, label(hass.states[e]), hass.states[e].attributes.color, anyOn)).join('')
+      + (ents.other ? chip(ents.other, 'Other', '#888', anyOn) : '');
     const discChips = ents.discounts.map((e) => {
       const at = hass.states[e].attributes;
       return chip(e, `${at.label} −${at.cents}c`, 'var(--primary-color)');
@@ -256,9 +259,9 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
 
     dyn.innerHTML = `
       <div class="hdr"><span class="t">${esc(this._config.title)}</span>${ents.refresh ? `<ha-icon icon="mdi:refresh" data-act="refresh" data-ent="${ents.refresh}" title="Refresh"></ha-icon>` : ''}</div>
-      <div class="chips">${netChips}</div>
-      <div class="chips">${fuelChips}</div>
-      ${discChips ? `<div class="chips">${discChips}</div>` : ''}
+      <div class="cap">Fuel brands</div><div class="chips">${netChips}</div>
+      <div class="cap">Fuel</div><div class="chips">${fuelChips}</div>
+      ${discChips ? `<div class="cap">My discounts</div><div class="chips">${discChips}</div>` : ''}
       <div class="cols">
         <div class="colh"><ha-icon icon="mdi:currency-usd"></ha-icon>Cheapest</div>
         <div class="colh"><ha-icon icon="mdi:map-marker-distance"></ha-icon>Closest</div>

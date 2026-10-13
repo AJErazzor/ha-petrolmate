@@ -16,7 +16,7 @@
           "location_entity": "A phone tracker or person follows you around; a zone stays put. Falls back to home when the entity has no GPS.",
           "radius": "Maximum distance. The API returns the nearest 50 stations, so in a city the real reach is usually smaller.",
           "states": "Where you usually fill up. Decides which station brands are offered when you set up where each fuel brand is sold, and for discounts.",
-          "networks": "The fuel brands you want. Which station brands sell each one is set on the next page."
+          "networks": "The fuel brands you want. Which station brands sell each one is under \"Where each fuel brand is sold\"."
         }
       }
     },
@@ -50,31 +50,86 @@
           "location_entity": "A phone tracker or person follows you around; a zone stays put. Falls back to home when the entity has no GPS.",
           "radius": "Maximum distance. The API returns the nearest 50 stations, so in a city the real reach is usually smaller.",
           "states": "Where you usually fill up. Decides which station brands are offered when you set up where each fuel brand is sold, and for discounts.",
-          "networks": "The fuel brands you want. Which station brands sell each one is set on the next page.",
+          "networks": "The fuel brands you want. Which station brands sell each one is under \"Where each fuel brand is sold\".",
           "scan_interval": "Prices only change every few hours; movement triggers its own refresh.",
           "move_distance": "Re-query once the tracked location has moved this far (at most every 2 minutes)."
         }
       },
       "brands": {
         "title": "Where each fuel brand is sold",
-        "description": "The station brands (the name on the shop) that sell each fuel brand: {networks}. Pick from the list — brands found near you show how many stations — or type any other name.",
-        "data": {
-          "brands_bp": "BP",
-          "brands_shell": "Shell",
-          "brands_ampol": "Ampol",
-          "brands_caltex": "Caltex",
-          "brands_7eleven": "7-Eleven",
-          "brands_mobil": "Mobil",
-          "brands_united": "United",
-          "brands_metro": "Metro",
-          "brands_puma": "Puma",
-          "brands_liberty": "Liberty",
-          "brands_costco": "Costco"
+        "description": "The station brands (the name on the shop) that sell each fuel brand. Stations of any brand not listed here count as **Other**. Brands found near you show how many stations in the list; you can also type a name.",
+        "sections": {
+          "bp": {
+            "name": "BP",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "shell": {
+            "name": "Shell",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "ampol": {
+            "name": "Ampol",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "caltex": {
+            "name": "Caltex",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "7eleven": {
+            "name": "7-Eleven",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "mobil": {
+            "name": "Mobil",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "united": {
+            "name": "United",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "metro": {
+            "name": "Metro",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "puma": {
+            "name": "Puma",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "liberty": {
+            "name": "Liberty",
+            "data": {
+              "brands": "Add station brand"
+            }
+          },
+          "costco": {
+            "name": "Costco",
+            "data": {
+              "brands": "Add station brand"
+            }
+          }
         }
       },
       "discounts": {
         "title": "My discounts",
-        "description": "Discounts lower the price shown and can change which station is cheapest. Each one gets a switch, off by default — turn it on while you hold the docket or voucher.\n\n{list}",
+        "description": "Discounts lower the price shown and can change which station is cheapest. Each one gets a switch, on when added — turn it off when you don't have the docket or voucher.\n\n{list}",
         "menu_options": {
           "discount_add": "Add a discount",
           "discount_edit": "Edit a discount",

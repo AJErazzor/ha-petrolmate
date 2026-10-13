@@ -130,6 +130,7 @@ class PetrolmateCoordinator(DataUpdateCoordinator[PetrolmateData]):
         # runtime filter state, driven by the switch/select entities
         self.enabled_networks: set[str] = set(self.networks)
         self.any_brand: bool = False
+        self.other_brands: bool = False  # stations whose brand isn't assigned to any fuel brand
         self.enabled_discounts: set[str] = set()
         self.selected_fuel: str = self.fuels[0] if self.fuels else "DIESEL"
         self.version: str | None = None  # integration version, shown on the device page
@@ -252,8 +253,8 @@ class PetrolmateCoordinator(DataUpdateCoordinator[PetrolmateData]):
                 "longitude": s.get("lng"),
                 "maps": maps_url(s.get("lat"), s.get("lng")),
                 "maps_google": google_maps_url(s.get("lat"), s.get("lng")),
-                # one of your ticked fuel brands (or Any is on)
-                "card": self.any_brand or (net is not None and net in self.enabled_networks),
+                # one of your ticked fuel brands, an unassigned brand with Other on, or anything with Any on
+                "card": self.any_brand or (net in self.enabled_networks if net else self.other_brands),
             })
         out.sort(key=lambda r: (r["price"], r["km"]))
         return out
