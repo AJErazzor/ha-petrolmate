@@ -89,6 +89,7 @@ Everything below is in the card's visual editor; in YAML only the settings you c
 | `entity` | auto | The integration's `select.*_fuel_type`. Only needed if you have more than one Petrolmate entry. |
 | `count` | `3` | Stations per column, 1–10. |
 | `columns` | `both` | `both`, `cheapest` or `closest`. |
+| `filters` | `open` | The pill rows: `open` (always shown), `collapsible_open` or `collapsible_closed`. Collapsed shows a one-line summary; open/closed is remembered per device. |
 | `maps` | `auto` | Which app opens for directions: `auto` (Apple Maps on iPhone, iPad and Mac, Google Maps everywhere else), `apple` or `google`. |
 | `map` | `true` | Show the map. |
 | `map_height` | `340` | Height in pixels. |

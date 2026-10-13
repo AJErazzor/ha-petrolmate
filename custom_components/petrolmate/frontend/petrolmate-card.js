@@ -8,19 +8,20 @@
  *   entity: select.petrolmate_fuel_type   # pick an entry when you have several
  *   count: 3                             # stations per column (1–10)
  *   columns: both                        # both | cheapest | closest
+ *   filters: open                        # open | collapsible_open | collapsible_closed (remembered per device)
  *   map: true
  *   map_height: 340
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '1.1.6';
+const PM_VERSION = '1.1.7';
 
 const LETTERS = 'ABCDEFGHIJ';
 // discount colours, in pill order; tiles show a matching dot
 const DISC_COLOURS = ['#14b8a6', '#a855f7', '#ec4899', '#3b82f6', '#f97316', '#84cc16'];
 const DEFAULTS = {
   title: 'Fuel', entity: '', count: 3, columns: 'both', maps: 'auto', map: true, map_height: 340,
-  show_brands: true, show_any: true, show_other: true, show_fuels: true, show_discounts: true, other_line: true, times: true, logos: true,
+  filters: 'open', show_brands: true, show_any: true, show_other: true, show_fuels: true, show_discounts: true, other_line: true, times: true, logos: true,
 };
 
 const FUEL_SHORT = { DIESEL: 'Diesel', ULP: 'ULP', E10: 'E10', PULP95: '95', PULP98: '98', LPG: 'LPG' };
@@ -74,6 +75,11 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
 .dots{display:inline-flex;gap:2px;margin-left:4px;vertical-align:2px}
 .dots i{width:8px;height:8px;border-radius:50%;background:var(--dc)}
 .cols.one{grid-template-columns:1fr}
+.flt summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;margin:0 4px 8px;font-size:12.5px;color:var(--secondary-text-color)}
+.flt summary::-webkit-details-marker{display:none}
+.flt summary ha-icon{--mdc-icon-size:18px;transition:transform .15s}
+.flt[open] summary ha-icon{transform:rotate(90deg)}
+.flt summary b{color:var(--primary-text-color);font-weight:600}
 .cap{margin:2px 4px 4px;text-align:center;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--secondary-text-color)}
 .off{font-size:.8em;font-weight:600;color:var(--success-color,#43a047)}
 .tile .h s{font-size:.7em;font-weight:400;color:var(--secondary-text-color);margin-left:3px}
@@ -205,11 +211,29 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
       </ha-card>`;
     const root = this.shadowRoot;
     root.querySelector('.dyn').addEventListener('click', (ev) => this._click(ev));
+    // 'toggle' doesn't bubble: catch the filters opening/closing on the way down, remember it on this device
+    root.querySelector('.dyn').addEventListener('toggle', (ev) => {
+      if (!ev.target.classList || !ev.target.classList.contains('flt')) return;
+      this._fltOpen = ev.target.open;
+      try { localStorage.setItem(this._fltKey(), this._fltOpen ? '1' : '0'); } catch (e) { /* storage blocked */ }
+    }, true);
     const info = root.querySelector('.info');
     if (info) info.addEventListener('click', () => root.querySelector('.mapwrap').classList.toggle('attr'));
     const fit = root.querySelector('.fit');
     if (fit) fit.addEventListener('click', () => { this._userMoved = false; this._map && this._map.closePopup(); this._fit(); });
-    this._map = null; this._markers = [];
+    // a rebuild (HA re-applies the config when you come back to a view) gets a fresh map, so forget the old one's
+    // tiles/style too — otherwise the new map never gets a style and stays blank until a page reload
+    if (this._map) this._map.remove();
+    this._map = null; this._markers = []; this._tiles = null; this._dark = undefined; this._mkey = null; this._userMoved = false;
+  }
+
+  // back on screen after being detached: maplibre's canvas doesn't notice, so nudge it
+  connectedCallback() {
+    if (this._map) setTimeout(() => {
+      this._map.invalidateSize();
+      const gl = this._tiles && this._tiles.getMaplibreMap && this._tiles.getMaplibreMap();
+      if (gl) gl.resize();
+    }, 50);
   }
 
   _click(ev) {
@@ -289,11 +313,13 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     const anyLine = cfg.other_line && !anyOn && any && best && any.price < best.price
       ? `<div class="any" data-act="go" data-val="${esc(this._dirUrl(any))}">Cheapest at other brands: <b>${money(any.price)}</b> at ${esc(any.station)} · ${any.km} km · ${+(best.price - any.price).toFixed(1)}c cheaper</div>` : '';
 
+    const pills = (cfg.show_brands ? `<div class="cap">Fuel brands</div><div class="chips">${netChips}</div>` : '')
+      + (cfg.show_fuels ? `<div class="cap">Fuel</div><div class="chips">${fuelChips}</div>` : '')
+      + (cfg.show_discounts && discChips ? `<div class="cap">My discounts</div><div class="chips">${discChips}</div>` : '');
+
     dyn.innerHTML = `
       <div class="hdr"><span class="t">${esc(this._config.title)}</span>${ents.refresh ? `<ha-icon icon="mdi:refresh" data-act="refresh" data-ent="${ents.refresh}" title="Refresh"></ha-icon>` : ''}</div>
-      ${cfg.show_brands ? `<div class="cap">Fuel brands</div><div class="chips">${netChips}</div>` : ''}
-      ${cfg.show_fuels ? `<div class="cap">Fuel</div><div class="chips">${fuelChips}</div>` : ''}
-      ${cfg.show_discounts && discChips ? `<div class="cap">My discounts</div><div class="chips">${discChips}</div>` : ''}
+      ${this._filters(pills, ents, fuel, anyOn)}
       <div class="cols ${showC && showN ? '' : 'one'}">
         ${showC ? '<div class="colh"><ha-icon icon="mdi:currency-usd"></ha-icon>Cheapest</div>' : ''}
         ${showN ? '<div class="colh"><ha-icon icon="mdi:map-marker-distance"></ha-icon>Closest</div>' : ''}
@@ -307,6 +333,25 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
       ? `${a.fuel_name || ''} · searched ${st.state} stations within ${st.attributes.reach_km} km · tap a station for directions` : '';
 
     if (this._config.map) this._renderMap(top, near, st).catch((e) => console.warn('petrolmate-card map:', e));
+  }
+
+  // ---- filters: plain, or folded away behind a one-line summary ----
+  _fltKey() { return 'petrolmate-filters-open:' + (this._config.entity || this._config.title || ''); }
+
+  _filters(pills, ents, fuel, anyOn) {
+    const mode = this._config.filters;
+    if (!pills || mode === 'open') return pills;
+    if (this._fltOpen === undefined) {
+      let stored = null;
+      try { stored = localStorage.getItem(this._fltKey()); } catch (e) { /* storage blocked */ }
+      this._fltOpen = stored != null ? stored === '1' : mode === 'collapsible_open';
+    }
+    const hass = this._hass, on = (e) => e && hass.states[e] && hass.states[e].state === 'on';
+    const brands = anyOn ? 'Any brand'
+      : [...ents.switches.filter(on).map((e) => hass.states[e].attributes.label), ...(on(ents.other) ? ['Other'] : [])].join(', ') || 'no brands';
+    const disc = ents.discounts.filter(on).length;
+    const summary = [FUEL_SHORT[fuel] || fuel, brands, disc ? `${disc} discount${disc > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+    return `<details class="flt" ${this._fltOpen ? 'open' : ''}><summary><ha-icon icon="mdi:chevron-right"></ha-icon><b>Filters</b> · ${esc(summary)}</summary>${pills}</details>`;
   }
 
   // ---- map ----
@@ -463,6 +508,9 @@ const EDITOR_SCHEMA = [
     { name: 'columns', selector: { select: { mode: 'dropdown', options: [
       { value: 'both', label: 'Cheapest and closest' }, { value: 'cheapest', label: 'Cheapest only' }, { value: 'closest', label: 'Closest only' }] } } },
   ] },
+  { name: 'filters', selector: { select: { mode: 'dropdown', options: [
+    { value: 'open', label: 'Always shown' }, { value: 'collapsible_open', label: 'Collapsible, starts open' },
+    { value: 'collapsible_closed', label: 'Collapsible, starts closed' }] } } },
   { name: 'maps', selector: { select: { mode: 'dropdown', options: [
     { value: 'auto', label: 'Auto (Apple on iPhone/iPad/Mac, Google elsewhere)' }, { value: 'apple', label: 'Apple Maps' }, { value: 'google', label: 'Google Maps' }] } } },
   { type: 'grid', name: '', schema: [
@@ -482,7 +530,7 @@ const EDITOR_SCHEMA = [
 ];
 const EDITOR_LABELS = {
   title: 'Title', entity: 'Petrolmate entry (fuel type select) — only needed with more than one',
-  count: 'Stations per column', columns: 'Columns', maps: 'Directions app', map: 'Show map', map_height: 'Map height',
+  count: 'Stations per column', filters: 'Filter pills', columns: 'Columns', maps: 'Directions app', map: 'Show map', map_height: 'Map height',
   show_brands: 'Fuel brand pills', show_any: '"Any" pill', show_other: '"Other" pill', show_fuels: 'Fuel pills', show_discounts: 'Discount pills',
   other_line: '"Cheapest at other brands" line', times: '"since…" times', logos: 'Brand logos',
 };
