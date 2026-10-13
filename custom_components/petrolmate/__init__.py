@@ -62,14 +62,6 @@ def _tidy_registry(hass: HomeAssistant, entry: PetrolmateConfigEntry, c: Petrolm
             if ent.unique_id.startswith(prefix) and ent.unique_id not in keep:
                 reg.async_remove(ent.entity_id)
                 break
-        else:
-            # TEMPORARY (added 1.1.4, remove in the release after): fuel brand switches used to be named
-            # "<brand> card", so older installs have switch.<entry>_<brand>_card. Same unique id, so history carries over;
-            # on/off isn't carried (restored by entity id), so renamed switches start on.
-            if ent.unique_id.startswith(f"{p}network_") and ent.entity_id.endswith("_card"):
-                new_id = ent.entity_id.removesuffix("_card")
-                if reg.async_get(new_id) is None and hass.states.get(new_id) is None:
-                    reg.async_update_entity(ent.entity_id, new_entity_id=new_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: PetrolmateConfigEntry) -> bool:

@@ -58,13 +58,9 @@ def _distance_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
-def split_brands(value: str | list[str] | None) -> list[str]:
-    """Brand lists, de-blanked. TEMPORARY (1.1.4, remove next release): installs before 1.1 saved a comma-separated string."""
-    if value is None:
-        return []
-    if isinstance(value, str):
-        value = value.split(",")
-    return [b for b in (x.strip() for x in value) if b]
+def split_brands(value: list[str] | None) -> list[str]:
+    """Brand list without blanks or stray spaces."""
+    return [b for b in (x.strip() for x in value or []) if b]
 
 
 async def async_detect_state(hass: HomeAssistant, lat: float, lng: float) -> str | None:
