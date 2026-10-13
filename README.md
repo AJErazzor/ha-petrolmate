@@ -105,10 +105,10 @@ For an entry called *Petrolmate*:
 
 | Entity | |
 |---|---|
-| `sensor.petrolmate_cheapest_diesel` (one per fuel) | Cheapest price in c/L at your ticked fuel brands, after discounts. Attributes include `station`, `brand`, `distance_km`, `pump_price`, `discount`, `discounts`, `maps` / `maps_google` (Apple and Google directions links), `latitude`/`longitude`, `top` and `closest` (up to 10 each; `top3`/`closest3` are kept too) and `cheapest_any_brand`. |
+| `sensor.petrolmate_cheapest_diesel` (one per fuel) | Cheapest price in c/L at your ticked fuel brands, after discounts. Attributes include `station`, `brand`, `distance_km`, `pump_price`, `discount`, `discounts`, `maps` / `maps_google` (Apple and Google directions links), `latitude`/`longitude`, `top` and `closest` (up to 10 each) and `cheapest_any_brand`. |
 | `sensor.petrolmate_stations_searched` | How many stations the last search returned, and how far it reached (`reach_km`). |
 | `select.petrolmate_fuel_type` | Which fuel the card shows. |
-| `switch.petrolmate_<brand>` | Include or exclude a fuel brand. (Installs from before 1.1 keep their `…_card` entity ids.) |
+| `switch.petrolmate_<brand>` | Include or exclude a fuel brand. (1.1.4 renames older `…_card` switches to this.) |
 | `switch.petrolmate_other_brands` | Also count stations whose brand isn't assigned to a fuel brand. Off by default. |
 | `switch.petrolmate_any_brand` | Count every station regardless of brand. Off by default. |
 | `switch.petrolmate_discount_<name>` | Apply that discount. On when added. |

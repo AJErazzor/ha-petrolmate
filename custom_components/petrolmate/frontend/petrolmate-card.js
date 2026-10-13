@@ -13,7 +13,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '1.1.3';
+const PM_VERSION = '1.1.4';
 
 const LETTERS = 'ABCDEFGHIJ';
 // discount colours, in pill order; tiles show a matching dot
@@ -243,10 +243,8 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
       return `<div class="chip ${on ? 'on' : ''} ${dim ? 'dim' : ''}" style="--cc:${colour}" data-act="toggle" data-ent="${e}">
         <ha-icon icon="${on ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'}"></ha-icon>${esc(label)}</div>`;
     };
-    // older versions named the switch "<brand> card" and had no label attribute
-    const label = (s) => s.attributes.label || (s.attributes.friendly_name || '').replace(/^.*? (\S+)(?: card)?$/i, '$1');
     const netChips = (ents.any ? chip(ents.any, 'Any', 'var(--primary-color)') : '')
-      + ents.switches.map((e) => chip(e, label(hass.states[e]), hass.states[e].attributes.color, anyOn)).join('')
+      + ents.switches.map((e) => chip(e, hass.states[e].attributes.label, hass.states[e].attributes.color, anyOn)).join('')
       + (ents.other ? chip(ents.other, 'Other', '#888', anyOn) : '');
     const discColour = {};
     const discChips = ents.discounts.map((e, i) => {
@@ -264,8 +262,8 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
 
     const cfg = this._config, count = Math.max(1, Math.min(10, +cfg.count || 3));
     const showC = cfg.columns !== 'closest', showN = cfg.columns !== 'cheapest';
-    const allTop = a.top || a.top3 || [], best = allTop[0];
-    const top = showC ? allTop.slice(0, count) : [], near = showN ? (a.closest || a.closest3 || []).slice(0, count) : [];
+    const allTop = a.top || [], best = allTop[0];
+    const top = showC ? allTop.slice(0, count) : [], near = showN ? (a.closest || []).slice(0, count) : [];
     // a dot per discount applied, coloured like its pill
     const dots = (r) => (r.discount > 0
       ? `<span class="dots" title="${esc((r.discounts || []).join(' + '))}">${(r.discounts || []).map((n) => `<i style="--dc:${discColour[n] || '#888'}"></i>`).join('')}</span>` : '');

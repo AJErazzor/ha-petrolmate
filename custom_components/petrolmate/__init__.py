@@ -43,18 +43,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: PetrolmateConfigEntry) -
     coordinator.async_track_movement()
     entry.runtime_data = coordinator
     entry.async_on_unload(entry.add_update_listener(_async_reload))
-    _remove_stale_discounts(hass, entry, coordinator)
+    _tidy_registry(hass, entry, coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-def _remove_stale_discounts(hass: HomeAssistant, entry: PetrolmateConfigEntry, c: PetrolmateCoordinator) -> None:
-    """Drop the switches of discounts deleted in the options."""
-    keep = {f"{entry.entry_id}_discount_{d['id']}" for d in c.discounts}
+def _tidy_registry(hass: HomeAssistant, entry: PetrolmateConfigEntry, c: PetrolmateCoordinator) -> None:
+    """Remove entities for fuels, fuel brands and discounts no longer configured, so they don't linger as unavailable."""
+    p = f"{entry.entry_id}_"
+    managed = {
+        f"{p}cheapest_": {f"{p}cheapest_{f.lower()}" for f in c.fuels},
+        f"{p}network_": {f"{p}network_{n}" for n in c.networks},
+        f"{p}discount_": {f"{p}discount_{d['id']}" for d in c.discounts},
+    }
     reg = er.async_get(hass)
     for ent in er.async_entries_for_config_entry(reg, entry.entry_id):
-        if ent.unique_id.startswith(f"{entry.entry_id}_discount_") and ent.unique_id not in keep:
-            reg.async_remove(ent.entity_id)
+        for prefix, keep in managed.items():
+            if ent.unique_id.startswith(prefix) and ent.unique_id not in keep:
+                reg.async_remove(ent.entity_id)
+                break
+        else:
+            # TEMPORARY (added 1.1.4, remove in the release after): fuel brand switches used to be named
+            # "<brand> card", so older installs have switch.<entry>_<brand>_card. Same unique id, so history carries over;
+            # on/off isn't carried (restored by entity id), so renamed switches start on.
+            if ent.unique_id.startswith(f"{p}network_") and ent.entity_id.endswith("_card"):
+                new_id = ent.entity_id.removesuffix("_card")
+                if reg.async_get(new_id) is None and hass.states.get(new_id) is None:
+                    reg.async_update_entity(ent.entity_id, new_entity_id=new_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: PetrolmateConfigEntry) -> bool:

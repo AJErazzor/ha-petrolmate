@@ -59,7 +59,7 @@ def _distance_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 def split_brands(value: str | list[str] | None) -> list[str]:
-    """Brand lists are stored as lists now; older installs saved a comma-separated string."""
+    """Brand lists, de-blanked. TEMPORARY (1.1.4, remove next release): installs before 1.1 saved a comma-separated string."""
     if value is None:
         return []
     if isinstance(value, str):
@@ -255,20 +255,18 @@ class PetrolmateCoordinator(DataUpdateCoordinator[PetrolmateData]):
                 "maps": maps_url(s.get("lat"), s.get("lng")),
                 "maps_google": google_maps_url(s.get("lat"), s.get("lng")),
                 # one of your ticked fuel brands, an unassigned brand with Other on, or anything with Any on
-                "card": self.any_brand or (net in self.enabled_networks if net else self.other_brands),
+                "mine": self.any_brand or (net in self.enabled_networks if net else self.other_brands),
             })
         out.sort(key=lambda r: (r["price"], r["km"]))
         return out
 
     def summary(self, fuel: str) -> dict[str, Any]:
         rows = self.rows(fuel)
-        card = [r for r in rows if r["card"]]
-        closest = sorted(card, key=lambda r: (r["km"], r["price"]))
+        mine = [r for r in rows if r["mine"]]
+        closest = sorted(mine, key=lambda r: (r["km"], r["price"]))
         return {
-            "top": card[:MAX_LIST],
+            "top": mine[:MAX_LIST],
             "closest": closest[:MAX_LIST],
-            "top3": card[:3],  # kept for existing automations/templates
-            "closest3": closest[:3],
             "cheapest_any_brand": rows[0] if rows else None,
         }
 

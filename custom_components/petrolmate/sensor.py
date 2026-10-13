@@ -1,4 +1,4 @@
-"""Sensors: cheapest price per fuel (with top3 / closest3 lists), plus a station count."""
+"""Sensors: cheapest price per fuel (with top / closest lists), plus a station count."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
     _attr_suggested_display_precision = 1
     _attr_icon = "mdi:gas-station"
     # lists change constantly and are only useful live — keep them out of the recorder
-    _unrecorded_attributes = frozenset({"top", "closest", "top3", "closest3", "cheapest_any_brand", "maps", "maps_google", "updated"})
+    _unrecorded_attributes = frozenset({"top", "closest", "cheapest_any_brand", "maps", "maps_google", "updated"})
 
     def __init__(self, coordinator: PetrolmateCoordinator, fuel: str) -> None:
         super().__init__(coordinator, f"cheapest_{fuel.lower()}")
@@ -45,13 +45,13 @@ class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        top = self._summary["top3"]
+        top = self._summary["top"]
         return top[0]["price"] if top else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         s = self._summary
-        best = s["top3"][0] if s["top3"] else None
+        best = s["top"][0] if s["top"] else None
         c = self.coordinator
         return {
             "fuel": self.fuel,
@@ -72,8 +72,6 @@ class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
             "longitude": best and best["longitude"],
             "top": s["top"],
             "closest": s["closest"],
-            "top3": s["top3"],
-            "closest3": s["closest3"],
             "cheapest_any_brand": s["cheapest_any_brand"],
             "networks": sorted(c.enabled_networks),
             "any_brand": c.any_brand,
