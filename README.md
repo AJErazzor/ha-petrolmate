@@ -9,6 +9,8 @@ Find the **cheapest** and the **closest** fuel near you, at the fuel brands you 
 
 Prices come from the free [Petrolmate API](https://petrolmate.com.au/home-assistant), which aggregates the Australian state government fuel price schemes. No API key needed.
 
+<p align="center"><img src="docs/screenshots/card-phone.png" width="380" alt="Petrolmate card: fuel brand, fuel and discount pills, cheapest and closest tiles, and a map of Adelaide CBD"></p>
+
 ## Features
 
 - **Follows you:** search around a phone tracker, a person or a zone. It re-checks after you've moved (500 m by default), not on every GPS ping.
@@ -47,11 +49,27 @@ Copy `custom_components/petrolmate` into your Home Assistant `config/custom_comp
 | Fuel types | One sensor is created per fuel. |
 | Fuel brands | One switch per fuel brand. |
 
+<p align="center"><img src="docs/screenshots/integration-page.png" width="640" alt="The Petrolmate integration page in Home Assistant"></p>
+
 **Configure** opens a menu:
+
+<p align="center"><img src="docs/screenshots/options-menu.png" width="420" alt="Petrolmate options menu"></p>
 
 - **Search settings & fuel brands:** the above, plus the refresh interval (default 60 min) and the "refresh after moving" distance.
 - **Where each fuel brand is sold:** the station brands (the name on the shop) for each fuel brand, picked from a list or typed. *Reset all to defaults* restores the built-in lists.
+<p align="center">
+  <img src="docs/screenshots/options-search.png" width="240" alt="Search settings and fuel brands">
+  <img src="docs/screenshots/options-brands.png" width="320" alt="Where each fuel brand is sold, one section per fuel brand">
+</p>
+
 - **My discounts:** add, edit or delete discounts. Most discounts depend on the shop rather than the fuel (the Coles docket works at Reddy Express but not OTR), so they're set per station brand. A discount marked *stacks* adds to the others (e.g. an in-store spend offer); otherwise each station uses its single best discount.
+
+<p align="center">
+  <img src="docs/screenshots/options-discounts.png" width="340" alt="My discounts list">
+  <img src="docs/screenshots/options-discount-form.png" width="340" alt="Adding a discount">
+</p>
+
+*Screenshots use a demo search around Adelaide CBD.*
 
 ## Dashboard card
 

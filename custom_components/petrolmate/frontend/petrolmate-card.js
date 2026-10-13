@@ -13,7 +13,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '1.1.2';
+const PM_VERSION = '1.1.3';
 
 const LETTERS = 'ABCDEFGHIJ';
 // discount colours, in pill order; tiles show a matching dot
@@ -289,7 +289,7 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     }
     const any = a.cheapest_any_brand;
     const anyLine = cfg.other_line && !anyOn && any && best && any.price < best.price
-      ? `<div class="any" data-act="go" data-val="${esc(this._dirUrl(any))}">Cheapest at other brands: <b>${money(any.price)}</b> at ${esc(any.station)} · ${any.km} km · ${money(best.price - any.price)} cheaper</div>` : '';
+      ? `<div class="any" data-act="go" data-val="${esc(this._dirUrl(any))}">Cheapest at other brands: <b>${money(any.price)}</b> at ${esc(any.station)} · ${any.km} km · ${+(best.price - any.price).toFixed(1)}c cheaper</div>` : '';
 
     dyn.innerHTML = `
       <div class="hdr"><span class="t">${esc(this._config.title)}</span>${ents.refresh ? `<ha-icon icon="mdi:refresh" data-act="refresh" data-ent="${ents.refresh}" title="Refresh"></ha-icon>` : ''}</div>
