@@ -5,18 +5,20 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
 [![Validate](https://github.com/AJErazzor/ha-petrolmate/actions/workflows/validate.yml/badge.svg)](https://github.com/AJErazzor/ha-petrolmate/actions/workflows/validate.yml)
 
-Find the **cheapest** and the **closest** fuel near you, limited to the fuel-card networks you actually use (BP, Shell, Ampol, Caltex, …). The search follows your phone around, and a bundled dashboard card shows everything at a glance, with a map and one-tap directions.
+Find the **cheapest** and the **closest** fuel near you, at the fuel brands you use (BP, Shell, Ampol, Caltex, …) and after your own discounts (supermarket dockets, motoring club, app offers). The search follows your phone around, and a bundled dashboard card shows everything at a glance, with a map and one-tap directions.
 
 Prices come from the free [Petrolmate API](https://petrolmate.com.au/home-assistant), which aggregates the Australian state government fuel price schemes. No API key needed.
 
 ## Features
 
 - **Follows you:** search around a phone tracker, a person or a zone. It re-checks after you've moved (500 m by default), not on every GPS ping.
-- **Your cards only:** pick your fuel-card networks, and choose which station brands count for each (for example OTR for Shell in SA, X Convenience for BP).
+- **Your fuel brands:** pick the fuel brands you want and which station brands sell each one (for example OTR and Reddy Express for Shell, X Convenience for BP). Brands are offered from a list for your state(s) plus whatever was found near you, so there's nothing to misspell.
+- **My discounts:** add the discounts you have (cents per litre, which station brands accept it, which fuels, whether it stacks). Prices and rankings use the discounted price, and each discount has a switch for when you're not holding the docket.
+- **Any and Other:** *Other* adds stations whose brand isn't assigned to a fuel brand; *Any* ignores your brand ticks for road trips, then puts them back.
 - **Every fuel:** Diesel, Unleaded 91, E10, Premium 95, Premium 98 and LPG, with one sensor each.
-- **Cheapest and closest:** the top 3 by price and the top 3 by distance, plus the cheapest station *without* your cards, so you can see what the card costs you.
-- **Filters as entities:** a fuel-type select and one switch per card network, usable from automations too. Changing them recalculates instantly with no new API call.
-- **Dashboard card included:** filter chips, numbered tiles with brand logos, and a map with callouts using Home Assistant's own map tiles. Tap any station for directions: Apple Maps on iPhone, Google Maps on Android.
+- **Cheapest and closest:** up to 10 by price and 10 by distance, plus the cheapest station at other brands, so you can see what sticking to your brands costs.
+- **Filters as entities:** a fuel-type select and switches for brands, Any, Other and each discount, usable from automations too. Changing them recalculates instantly with no new API call.
+- **Dashboard card included:** filter pills, numbered tiles with brand logos, and a map with callouts using Home Assistant's own map tiles. Tap any station for directions: Apple Maps on iPhone, Google Maps on Android. A visual editor covers every option.
 - **Light on your database:** the per-station lists are kept out of the recorder.
 
 ## Installation
@@ -41,10 +43,15 @@ Copy `custom_components/petrolmate` into your Home Assistant `config/custom_comp
 |---|---|
 | Search around | A `device_tracker`, `person` or `zone`. Falls back to home if it has no GPS fix. |
 | Search radius | 1–25 km. The API returns the nearest 50 stations, so in a city the real reach is usually 5–8 km. |
+| States | Where you usually fill up (pre-filled from your home location). Decides which station brands are offered in the lists. |
 | Fuel types | One sensor is created per fuel. |
-| Fuel card networks | One switch per network. |
+| Fuel brands | One switch per fuel brand. |
 
-Under **Configure** you can also set the refresh interval (default 60 min), the "refresh after moving" distance, and, on the second page, **which station brands count for each card network** (comma separated, as Petrolmate names them).
+**Configure** opens a menu:
+
+- **Search settings & fuel brands:** the above, plus the refresh interval (default 60 min) and the "refresh after moving" distance.
+- **Where each fuel brand is sold:** the station brands (the name on the shop) for each fuel brand, picked from a list or typed. *Reset all to defaults* restores the built-in lists.
+- **My discounts:** add, edit or delete discounts. Most discounts depend on the shop rather than the fuel (the Coles docket works at Reddy Express but not OTR), so they're set per station brand. A discount marked *stacks* adds to the others (e.g. an in-store spend offer); otherwise each station uses its single best discount.
 
 ## Dashboard card
 
@@ -54,16 +61,23 @@ The card is served by the integration, so there's no separate resource to add.
 type: custom:petrolmate-card
 ```
 
+Everything below is in the card's visual editor; in YAML only the settings you change are needed.
+
 | Option | Default | |
 |---|---|---|
-| `entity` | auto | The integration's `select.*_fuel_type`. Set this if you have more than one Petrolmate entry. |
 | `title` | `Fuel` | |
+| `entity` | auto | The integration's `select.*_fuel_type`. Only needed if you have more than one Petrolmate entry. |
+| `count` | `3` | Stations per column, 1–10. |
+| `columns` | `both` | `both`, `cheapest` or `closest`. |
+| `maps` | `auto` | Which app opens for directions: `auto` (Apple Maps on iPhone, iPad and Mac, Google Maps everywhere else), `apple` or `google`. |
 | `map` | `true` | Show the map. |
 | `map_height` | `340` | Height in pixels. |
-| `maps` | `auto` | Which app opens for directions: `auto` (Apple Maps on iPhone, iPad and Mac, Google Maps everywhere else), `apple` or `google`. |
-| `logos` | built in | Override a network logo, e.g. `logos: { bp: /local/bp.svg }` |
+| `show_brands` / `show_fuels` / `show_discounts` | `true` | Show each row of pills. |
+| `other_line` | `true` | Show the "Cheapest at other brands" line. |
+| `times` | `true` | Show when each price was set ("since Thu"). |
+| `logos` | `true` | Show brand logos on the tiles. YAML only: `logos: { bp: /local/bp.svg }` overrides one. |
 
-Cheapest stations are numbered **1–3** and closest stations are lettered **A–C**, on both the tiles and the map. A station on both lists shows as **1A**.
+Cheapest stations are numbered **1, 2, 3…** and closest stations lettered **A, B, C…**, on both the tiles and the map; a station on both lists shows as **1A**. The cheapest station, and any tied with it, get a double ring in their brand colour. A discounted price shows the pump price crossed out and a dot in the colour of each discount pill that applied.
 
 **"Custom element doesn't exist" or the card is missing from the card picker?** Restart Home Assistant, then hard-refresh the browser (Ctrl+Shift+R). It can take more than one refresh. In the companion app, use *Settings → Companion app → Debugging → Reset frontend cache*.
 
@@ -73,10 +87,13 @@ For an entry called *Petrolmate*:
 
 | Entity | |
 |---|---|
-| `sensor.petrolmate_cheapest_diesel` (one per fuel) | Cheapest price in c/L at your enabled networks. Attributes include `station`, `brand`, `distance_km`, `maps` / `maps_google` (Apple and Google directions links), `latitude`/`longitude`, `top3`, `closest3` and `cheapest_any_brand`. |
+| `sensor.petrolmate_cheapest_diesel` (one per fuel) | Cheapest price in c/L at your ticked fuel brands, after discounts. Attributes include `station`, `brand`, `distance_km`, `pump_price`, `discount`, `discounts`, `maps` / `maps_google` (Apple and Google directions links), `latitude`/`longitude`, `top` and `closest` (up to 10 each; `top3`/`closest3` are kept too) and `cheapest_any_brand`. |
 | `sensor.petrolmate_stations_searched` | How many stations the last search returned, and how far it reached (`reach_km`). |
 | `select.petrolmate_fuel_type` | Which fuel the card shows. |
-| `switch.petrolmate_<network>_card` | Include or exclude a network. With every switch off, all networks count. |
+| `switch.petrolmate_<brand>` | Include or exclude a fuel brand. (Installs from before 1.1 keep their `…_card` entity ids.) |
+| `switch.petrolmate_other_brands` | Also count stations whose brand isn't assigned to a fuel brand. Off by default. |
+| `switch.petrolmate_any_brand` | Count every station regardless of brand. Off by default. |
+| `switch.petrolmate_discount_<name>` | Apply that discount. On when added. |
 | `button.petrolmate_refresh` | Re-query now. |
 
 ### Example: notify when diesel is cheap nearby
@@ -100,7 +117,8 @@ actions:
 - **Diesel in SA:** most South Australian stations list diesel only as *Premium Diesel*, so "Diesel" covers both the `DIESEL` and `PDIESEL` codes.
 - **"since Thu"** on a tile is when the station last *changed* that price. Diesel often holds for days.
 - **Prices** update every 6–12 hours from the government feeds, and the API caches for 2 minutes. Please keep the refresh interval sensible, since it's a free service.
-- **Brand names** differ by state. If a station isn't being picked up, check its brand in the `top3` / `cheapest_any_brand` attributes and add it under **Configure → brands**.
+- **Brand names** differ by state. A brand nobody has assigned yet shows up in the lists as "*name* · *n* nearby"; add it to a fuel brand under **Configure → Where each fuel brand is sold**, or turn on **Other**.
+- **Discounts** can't be checked against the conditions (spend $30, participating sites only), so the discounted price is a best case. Switch a discount off when you don't have the docket.
 
 ## Credits and disclaimer
 

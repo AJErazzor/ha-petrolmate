@@ -13,7 +13,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.2.6';
+const PM_VERSION = '1.1.2';
 
 const LETTERS = 'ABCDEFGHIJ';
 // discount colours, in pill order; tiles show a matching dot
