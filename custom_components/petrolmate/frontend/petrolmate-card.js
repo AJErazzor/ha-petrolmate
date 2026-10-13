@@ -11,7 +11,7 @@
  *   maps: auto                           # directions app: auto (Apple on iPhone/iPad/Mac, Google elsewhere) | apple | google
  *   logos: { bp: /local/logos/bp.svg }    # override a network's logo (defaults come from the integration)
  */
-const PM_VERSION = '0.2.1';
+const PM_VERSION = '0.2.2';
 
 const FUEL_SHORT = { DIESEL: 'Diesel', ULP: 'ULP', E10: 'E10', PULP95: '95', PULP98: '98', LPG: 'LPG' };
 
@@ -62,7 +62,8 @@ ha-card{padding:12px 12px 10px;overflow:hidden}
 .chip.on ha-icon{color:var(--cc)}
 .chip.dim{opacity:.45}
 .cap{margin:2px 4px 4px;text-align:center;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--secondary-text-color)}
-.tile .h s,.co-price s{font-size:.8em;font-weight:400;color:var(--secondary-text-color)}
+.off{font-size:.8em;font-weight:700;color:var(--success-color,#43a047)}
+.co-price s{font-size:.8em;font-weight:400;color:var(--secondary-text-color)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .colh{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600;margin:4px 4px 0}
 .colh ha-icon{--mdc-icon-size:18px}
@@ -240,8 +241,8 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     }).join('');
 
     const top = a.top3 || [], near = a.closest3 || [], best = top[0];
-    const off = (r) => (r.discount > 0 ? ` <s>${money(r.pump_price)}</s>` : '');
-    const offNote = (r) => (r.discount > 0 ? `−${r.discount}c ${esc((r.discounts || []).join('+'))} · ` : '');
+    // discount tag sits where a struck pump price would; names + pump price are in the map pop-up
+    const off = (r) => (r.discount > 0 ? ` <span class="off">−${r.discount}c</span>` : '');
     const tile = (r, lab, head, detail) => r
       ? `<div class="tile" style="--c:${colour(r)};${logo(r) ? `--logo:url('${logo(r)}')` : ''}" data-act="go" data-val="${esc(this._dirUrl(r))}">
           <div class="h"><span class="bd">${lab}</span>${head}</div><div class="st">${esc(r.station)}</div><div class="dt">${detail}</div></div>`
@@ -249,9 +250,9 @@ const makeCard = () => class PetrolmateCard extends HTMLElement {
     let tiles = '';
     for (let i = 0; i < 3; i++) {
       const c = top[i], n = near[i];
-      tiles += tile(c, i + 1, c && `<b>${money(c.price)}</b>${off(c)} · ${c.km} km`, c && offNote(c) + since(c.updated));
+      tiles += tile(c, i + 1, c && `<b>${money(c.price)}</b>${off(c)} · ${c.km} km`, c && since(c.updated));
       const d = n && best ? n.price - best.price : 0;
-      tiles += tile(n, 'ABC'[i], n && `<b>${n.km} km</b> · ${money(n.price)}${off(n)}`, n && `${d > 0.05 ? '+' + money(d) : 'cheapest'} · ${offNote(n)}${since(n.updated)}`);
+      tiles += tile(n, 'ABC'[i], n && `<b>${n.km} km</b> · ${money(n.price)}${off(n)}`, n && `${d > 0.05 ? `+${+d.toFixed(1)}c vs cheapest` : 'cheapest'} · ${since(n.updated)}`);
     }
     const any = a.cheapest_any_brand;
     const anyLine = !anyOn && any && best && any.price < best.price
