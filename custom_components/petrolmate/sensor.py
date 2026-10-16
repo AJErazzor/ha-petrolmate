@@ -67,9 +67,9 @@ class CheapestFuelSensor(PetrolmateEntity, SensorEntity):
             "discounts": best and best["discounts"],
             "maps": best and best["maps"],
             "maps_google": best and best["maps_google"],
-            # latitude/longitude put the cheapest station on a map card
-            "latitude": best and best["latitude"],
-            "longitude": best and best["longitude"],
+            # NOT plain latitude/longitude: HA's Map panel plots any entity that has those, which put the sensors on the main map
+            "station_latitude": best and best["latitude"],
+            "station_longitude": best and best["longitude"],
             "top": s["top"],
             "closest": s["closest"],
             "cheapest_any_brand": s["cheapest_any_brand"],

@@ -109,7 +109,7 @@ For an entry called *Petrolmate*:
 
 | Entity | |
 |---|---|
-| `sensor.petrolmate_cheapest_diesel` (one per fuel) | Cheapest price in c/L at your ticked fuel brands, after discounts. Attributes include `station`, `brand`, `distance_km`, `pump_price`, `discount`, `discounts`, `maps` / `maps_google` (Apple and Google directions links), `latitude`/`longitude`, `top` and `closest` (up to 10 each) and `cheapest_any_brand`. |
+| `sensor.petrolmate_cheapest_diesel` (one per fuel) | Cheapest price in c/L at your ticked fuel brands, after discounts. Attributes include `station`, `brand`, `distance_km`, `pump_price`, `discount`, `discounts`, `maps` / `maps_google` (Apple and Google directions links), `station_latitude`/`station_longitude` (not plain `latitude`/`longitude`, so the sensors stay off the Home Assistant Map panel), `top` and `closest` (up to 10 each) and `cheapest_any_brand`. |
 | `sensor.petrolmate_stations_searched` | How many stations the last search returned, and how far it reached (`reach_km`). |
 | `select.petrolmate_fuel_type` | Which fuel the card shows. |
 | `switch.petrolmate_<brand>` | Include or exclude a fuel brand. |
