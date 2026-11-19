@@ -2,7 +2,7 @@
 
 # Petrolmate Fuel Prices for Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
+[![Marketplace](https://img.shields.io/badge/Marketplace-Custom-41BDF5.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=AJErazzor&repository=ha-petrolmate&category=integration)
 [![Validate](https://github.com/AJErazzor/ha-petrolmate/actions/workflows/validate.yml/badge.svg)](https://github.com/AJErazzor/ha-petrolmate/actions/workflows/validate.yml)
 
 Find the **cheapest** and the **closest** fuel near you, at the fuel brands you use (BP, Shell, Ampol, Caltex, …) and after your own discounts (supermarket dockets, motoring club, app offers). The search follows your phone around, and a bundled dashboard card shows everything at a glance, with a map and one-tap directions.
@@ -25,13 +25,19 @@ Prices come from the free [Petrolmate API](https://petrolmate.com.au/home-assist
 
 ## Installation
 
-### HACS (recommended)
+### Marketplace (Home Assistant 2026.11 or newer, recommended)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=AJErazzor&repository=ha-petrolmate&category=integration)
+[![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=AJErazzor&repository=ha-petrolmate&category=integration)
+
+1. Go to **Settings → Marketplace → Add from link**, paste `https://github.com/AJErazzor/ha-petrolmate`, and install **Petrolmate Fuel Prices**. (Or use the button above.)
+2. If the Marketplace asks for a restart, do it from **Settings → System → Repairs**.
+3. **Refresh your browser** (on desktop, Ctrl/Cmd + Shift + R; in the app, close and reopen it) so the dashboard card loads.
+
+### HACS (older Home Assistant)
 
 1. In HACS, open **⋮ → Custom repositories** and add `https://github.com/AJErazzor/ha-petrolmate` with the type **Integration**.
 2. Install **Petrolmate Fuel Prices** and restart Home Assistant.
-3. **Refresh your browser** (on desktop, Ctrl/Cmd + Shift + R; in the app, close and reopen it) so the dashboard card loads.
+3. **Refresh your browser** so the dashboard card loads.
 
 ### Manual
 

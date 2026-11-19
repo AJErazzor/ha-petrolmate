@@ -1,0 +1,97 @@
+name: Release
+
+# Push or merge to main with a commit message (or a commit in the merged PR)
+# starting with:
+#   major: ...  -> 1.0.0 -> 2.0.0
+#   minor: ...  -> 0.1.0 -> 0.2.0
+#   patch: ...  -> 0.1.0 -> 0.1.1
+# Anything else: no release.
+# The workflow writes the new version into manifest.json, commits it,
+# tags vX.Y.Z and publishes a GitHub Release (which HACS picks up).
+# Nothing is released unless the HACS and hassfest checks (validate.yml) pass first.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate
+    uses: ./.github/workflows/validate.yml
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Work out bump from commit messages
+        id: bump
+        # Looks at every commit in the push, so it works for direct pushes,
+        # squash merges and normal PR merges ("Merge pull request #n ..." with
+        # the branch's own minor:/patch: commits underneath). Highest bump wins;
+        # the release title comes from the first line carrying that prefix.
+        run: |
+          lines="$(jq -r '.commits[].message, (.head_commit.message // "")' "$GITHUB_EVENT_PATH" | grep -E '^(major|minor|patch):' || true)"
+          kind=none
+          for k in patch minor major; do
+            if printf '%s\n' "$lines" | grep -q "^$k:"; then kind=$k; fi
+          done
+          title=""
+          if [ "$kind" != none ]; then
+            title="$(printf '%s\n' "$lines" | grep -m1 "^$kind:" | sed "s/^$kind: *//")"
+          fi
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+          echo "title=$title" >> "$GITHUB_OUTPUT"
+          echo "bump: $kind ($title)"
+
+      - name: Calculate next version
+        if: steps.bump.outputs.kind != 'none'
+        id: ver
+        run: |
+          last="$(git tag --list 'v*' --sort=-v:refname | head -n1)"
+          last="${last#v}"
+          if [ -z "$last" ]; then
+            last="$(jq -r .version custom_components/petrolmate/manifest.json)"
+          fi
+          IFS=. read -r MA MI PA <<< "$last"
+          case "${{ steps.bump.outputs.kind }}" in
+            major) MA=$((MA+1)); MI=0; PA=0 ;;
+            minor) MI=$((MI+1)); PA=0 ;;
+            patch) PA=$((PA+1)) ;;
+          esac
+          echo "version=$MA.$MI.$PA" >> "$GITHUB_OUTPUT"
+
+      - name: Write version into manifest.json
+        if: steps.bump.outputs.kind != 'none'
+        run: |
+          f=custom_components/petrolmate/manifest.json
+          jq --indent 2 --arg v "${{ steps.ver.outputs.version }}" '.version = $v' "$f" > "$f.tmp"
+          mv "$f.tmp" "$f"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # keep the card's version label in step
+          sed -i "s/^const PM_VERSION = '.*';/const PM_VERSION = '${{ steps.ver.outputs.version }}';/" \
+            custom_components/petrolmate/frontend/petrolmate-card.js
+          git add "$f" custom_components/petrolmate/frontend/petrolmate-card.js
+          git commit -m "Release v${{ steps.ver.outputs.version }}" || echo "manifest already at this version"
+          git tag "v${{ steps.ver.outputs.version }}"
+          git push origin HEAD:main --tags
+
+      - name: Publish GitHub Release
+        if: steps.bump.outputs.kind != 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.ver.outputs.version }}" \
+            --title "v${{ steps.ver.outputs.version }}: ${{ steps.bump.outputs.title }}" \
+            --generate-notes

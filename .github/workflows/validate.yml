@@ -4,6 +4,7 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  workflow_call:
   schedule:
     - cron: "0 3 * * 1"
 
@@ -12,7 +13,7 @@ jobs:
     name: Hassfest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: home-assistant/actions/hassfest@master
 
   hacs:
@@ -22,5 +23,3 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # brand images ship inside the integration (custom_components/petrolmate/brand/)
-          ignore: brands
