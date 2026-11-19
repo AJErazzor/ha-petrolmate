@@ -1,7 +1,9 @@
 {
   "domain": "petrolmate",
   "name": "Petrolmate Fuel Prices",
-  "codeowners": ["@AJErazzor"],
+  "codeowners": [
+    "@AJErazzor"
+  ],
   "config_flow": true,
   "dependencies": [
     "frontend",
@@ -12,5 +14,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/AJErazzor/ha-petrolmate/issues",
   "requirements": [],
-  "version": "1.1.8"
+  "version": "1.1.9"
 }
